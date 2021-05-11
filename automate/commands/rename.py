@@ -59,11 +59,18 @@ def get_ids(excelfile, sheet):
     required=True,
     help="The directory containing the files to rename.",
 )
+@click.option(
+    "--award/--new-award",
+    default=True,
+    required=True,
+    show_default=True,
+    help="The sheet within the infile you want to read. This can be the name or an index.",
+)
 @click.command()
-def cli(infile, sheet, filepath):
+def cli(infile, sheet, filepath, award):
     """Rename files for the WARC Awards for Effectiveness."""
     click.echo('\nINPUT: ' + click.style(filepath, fg='yellow'))
 
     ids = get_ids(infile, sheet)
-    rf = rename.RenameFile(filepath, ids)
+    rf = rename.RenameFile(filepath, ids, award)
     rf.runprocess()
