@@ -24,7 +24,7 @@ class Context:
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
         self.file = file
-        self.metadata = None
+        self.metadata = Metadata(data, file)
 
 
 def read_spreadsheet(excel_file, excel_sheet):
@@ -62,10 +62,6 @@ def cli(ctx, infile, sheet):
     f = Path(infile)
     if f.suffix == ".xlsx":
         ctx.obj = Context(data=read_spreadsheet(f, sheet), file=f)
-        ctx.obj.metadata = Metadata(
-            data=ctx.obj.data,
-            file=ctx.obj.file
-        )
     else:
         print("--infile must be an xlsx file.")
 
