@@ -84,7 +84,7 @@ def create(ctx, infile, path, outfile, award, create_type):
 
     click.echo(f'Creating: {create_type} - {outfile}')
 
-    create
+    asset = CreateAsset(path, outfile, award, create_type)
     pass
 
 
@@ -117,7 +117,7 @@ def shortlist(ctx, infile, path):
 
     for file in path:
         SS = Scoresheet()
-        SS.read_scores(file)
-        SS.get_judge(file)
+        scores = SS.read_scores()
+        judge = SS.get_judge()
 
         # CS = Collate()
