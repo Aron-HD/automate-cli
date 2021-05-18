@@ -74,13 +74,21 @@ class RenameFile:
         elif not self.award:
             idi = stem.split('_')
             # get correct id if there is no underscore separation
-            if len(idi) > 1:
+            id_parts = len(idi)
+            if id_parts > 1:
                 raw_id = idi[0]
 
             new_id = self.lookup_id(raw_id)
 
-            new_name = name.replace(raw_id, new_id).replace(
-                'CaseFilm', 'v01').replace('SupportingContent', 'v02') if new_id else False
+            if new_id:
+                new_name = name.replace(raw_id, new_id)
+                # .replace('CaseFilm', 'v01')#.replace('SupportingContent', 'v02') doesn't differentiate
+
+                # if id_parts > 1:
+
+                #     ext = file.suffix
+                #     new_name = ''.join([idi[0], idi[2]]) + ext  # rewrite this
+                #     new_id = True
 
         return new_name, new_id, raw_id
 
@@ -97,11 +105,11 @@ class RenameFile:
             new_file = file.parent / new_name
             try:
                 file.rename(new_file)
-                click.echo(fr"{original_id}   ->   {new_name}")
+                click.echo(fr"{fn}   ->   {new_name}")
             except FileNotFoundError:
                 click.echo(fn, '- src file not found')
             except FileExistsError:
-                click.echo(' FAILED\t' + original_id + ' -> ' +
+                click.echo(' FAILED\t' + fn + ' -> ' +
                            new_name + ' - already exists')
 
     def runprocess(self):
