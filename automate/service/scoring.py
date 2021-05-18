@@ -1,6 +1,7 @@
 from glob import glob
 from pathlib import Path
 import pandas as pd
+from natsort import natsorted
 
 
 class Collate:
@@ -132,8 +133,15 @@ class CreateAsset(object):
             fn = f"WARC {self.award} Scoresheet - {category} - GROUP {index}.csv" \
                 if category else f"WARC {self.award.upper()} Scoresheet - GROUP {index}.csv"
 
+            # TODO
+            # - ExcelWriter
+            # - add formula TotalScores Sum column
+            # - add styles and width to titles column
+
+            # set multiple indexes to merge
             group.set_index(['ID', 'Ref'], inplace=True)
             group.drop(['PaperGroup'], axis=1, inplace=True)
+            group.sort_values(by=['ID'], inplace=True)
 
             group.to_csv(Path(self.path) / fn)
             fns.append(fn)
