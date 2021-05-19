@@ -2,7 +2,7 @@ import click
 import pandas as pd
 from automate.service import rename
 
-DEFAULT_INFILE = r'D:\2021 Awards\2021 1. Effectiveness Awards\WAFE_2021_EDIT.xlsx'
+DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
 DEFAULT_FILESPATH = r'D:\2021 Awards\2021 1. Effectiveness Awards\RENAMETEST'
 DEFAULT_FILE = r'D:\2021 Awards\2021 1. Effectiveness Awards\RENAMETEST\758812_1710344_CaseFilm.mp4'
 
@@ -70,7 +70,13 @@ def get_ids(excelfile, sheet):
 def cli(infile, sheet, filepath, award):
     """Rename files for the WARC Awards for Effectiveness."""
     click.echo('\nINPUT: ' + click.style(filepath, fg='yellow'))
-
     ids = get_ids(infile, sheet)
-    rf = rename.RenameFile(filepath, ids, award)
-    rf.runprocess()
+
+    if award:
+        rf = rename.RenameFile(filepath, ids, award)
+        rf.runprocess()
+    elif not award:
+        fn = rename.WafeFilenames(filepath, ids)
+        fn.process()
+
+        # print(len(new_names))
