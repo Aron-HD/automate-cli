@@ -3,6 +3,134 @@ from pathlib import Path
 from pprint import pprint
 
 
+class WafeFilenames:
+    VTYPES = ['v01', 'SupportingContent']
+    # inherit this from other
+
+    def __init__(self, path, ids):
+        self.path = Path(path)
+        self.ids = ids
+        self.files = []
+        self.data = {}
+        self.old_filenames = []
+        self.rename_data = {}
+
+    def lookup_wafe_id(self, idnum: int):
+        """lookup id within excel ids."""
+        try:
+            new = self.ids[idnum]
+            return new
+        except KeyError as e:
+            # print('KeyError:', e, '- not found during lookup')
+            return None
+
+    def separate_filenames(self):
+        for name in self.files:
+            f = Path(name)
+            fn = f.name
+            stem = f.stem
+            # split name without ext
+            idi = stem.split('_')
+            id_parts = len(idi)
+
+            # label parts
+            if id_parts == 3:
+                raw_id = idi[0]
+
+                new_id = self.lookup_wafe_id(raw_id)
+                # print(new_id)
+
+                if new_id is not None:
+                    self.old_filenames.append(fn)
+                    asset_id = idi[1]
+                    tail = {
+                        'vtype': idi[2].replace('CaseFilm', 'v01'),
+                        'ext': f.suffix
+                    }
+                    if not new_id in self.data.keys():  # change to new_id
+                        # change to new_id
+                        self.data[new_id] = {asset_id: tail}
+                    else:
+                        self.data[new_id][asset_id] = tail  # change to new_id
+
+        return self.data
+
+    def number_filenames(self):
+
+        def count_vids(value: str, obj: dict):
+            return sum(x == value for x in obj.values())
+        # make this scalable to different vals
+
+        new_filenames = []
+        vtypes = WafeFilenames.VTYPES
+
+        for id_key in self.data:
+            # make this scalable to different vals
+            creative_vids = 0
+            campaign_vids = 0
+
+            in_ids = self.data[id_key]
+
+            for asset_key in in_ids:
+                # get dict object within each asset key
+                asset_obj = in_ids[asset_key]
+                # make this scalable to different vals
+                campaign_vids += count_vids(vtypes[0], asset_obj)
+                creative_vids += count_vids(vtypes[1], asset_obj)
+
+            # count video number
+            vnum = 1
+            for asset_key in in_ids:
+
+                asset = in_ids[asset_key]
+                vk = 'vtype'  # value key
+                vt = asset[vk]  # vtype value
+
+                # if no campaign vids and 'vtype'='SupportingContent'
+                if vt == vtypes[1]:
+                    vnum += 1 if campaign_vids else 0
+                    # update starting from v02
+                    asset.update({vk: f'v0{vnum}'})
+                    # else increment after each starting on v01
+                    vnum += 1 if not campaign_vids else 0
+
+                new_filenames.append(''.join([
+                    id_key,
+                    asset[vk],
+                    asset['ext']
+                ]))
+
+        self.rename_data = dict(zip(self.old_filenames, new_filenames))
+
+        return new_filenames
+
+    def process(self):
+        p = self.path
+        if p.is_dir():
+            self.files = list(p.glob('*'))
+            self.separate_filenames()
+            self.number_filenames()
+            lookup = self.rename_data
+            for f in self.files:
+                try:
+                    fn = f.name
+                    new_name = lookup[fn]
+                    par = f.parent
+                    new_file = p / new_name
+                    click.echo(fr"{fn}   ->   {new_file}")
+
+                    # write the output to a csv / log in the path
+
+                    # CHECK_OUPUT #### f.rename(new_file) ####
+                    break
+
+                except KeyError as e:
+                    click.echo(e)
+        elif p.is_file():
+            click.echo('files not accepted')
+            # self.rename_file(p)
+
+
 class RenameFile:
     """Rename a file or directory of files according to a column in the excel sheet."""
 
@@ -21,14 +149,10 @@ class RenameFile:
             return False
 
     def rename_multiple(self, files):
-        """Recursively loops through file list."""
-        # Base case
-        if files == []:
-            return 0
-        else:
-            f = files[0]
-            self.rename_file(f)
-            return self.rename_multiple(files[1:])
+        """Loops through file list."""
+        if self.award:
+            for file in files:
+                self.rename_file(file)
 
     def split_filename(self, file, name):
         """Split filename correctly to get id based on boolean award legacy or new system."""
@@ -70,25 +194,6 @@ class RenameFile:
 
             new_name = edited_id + \
                 file.suffix if new_id else False
-
-        elif not self.award:
-            idi = stem.split('_')
-            # get correct id if there is no underscore separation
-            id_parts = len(idi)
-            if id_parts > 1:
-                raw_id = idi[0]
-
-            new_id = self.lookup_id(raw_id)
-
-            if new_id:
-                new_name = name.replace(raw_id, new_id)
-                # .replace('CaseFilm', 'v01')#.replace('SupportingContent', 'v02') doesn't differentiate
-
-                # if id_parts > 1:
-
-                #     ext = file.suffix
-                #     new_name = ''.join([idi[0], idi[2]]) + ext  # rewrite this
-                #     new_id = True
 
         return new_name, new_id, raw_id
 
