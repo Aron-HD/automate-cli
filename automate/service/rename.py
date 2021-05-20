@@ -4,17 +4,20 @@ from pprint import pprint
 
 
 class WafeFilenames:
-    VTYPES = ['v01', 'SupportingContent']
-    IMGTYPE = 'EntryPaper'
+    VTYPES = ['CaseFilm', 'SupportingContent']
+    VFORMATS = ['.mov', '.mp4']
+    IMGTYPE = 'Entrypaper'
+
     # inherit this from other
 
-    def __init__(self, path, ids):
+    def __init__(self, path, ids, name_format):
         self.path = Path(path)
         self.ids = ids
+        self.name_format = name_format
         self.files = []
-        self.data = {}
+        self.split_filenames = {}
         self.old_filenames = []
-        self.rename_data = {}
+        self.output_filename = self.path / 'rename_output.csv'
 
     def lookup_wafe_id(self, idnum: int):
         """lookup id within excel ids."""
@@ -39,24 +42,24 @@ class WafeFilenames:
                 raw_id = idi[0]
 
                 new_id = self.lookup_wafe_id(raw_id)
-                # print(new_id)
 
                 if new_id is not None:
                     self.old_filenames.append(fn)
                     asset_id = idi[1]
                     tail = {
-                        'type': idi[2].replace('CaseFilm', 'v01'),
+                        'type': idi[2],
                         'ext': f.suffix
                     }
-                    if not new_id in self.data.keys():  # change to new_id
+                    if not new_id in self.split_filenames.keys():  # change to new_id
                         # change to new_id
-                        self.data[new_id] = {asset_id: tail}
+                        self.split_filenames[new_id] = {asset_id: tail}
                     else:
-                        self.data[new_id][asset_id] = tail  # change to new_id
+                        # change to new_id
+                        self.split_filenames[new_id][asset_id] = tail
 
-        return self.data
+        return self.split_filenames
 
-    def number_vids(self):
+    def order_filenames(self):
 
         def count_vids(value: str, obj: dict):
             return sum(x == value for x in obj.values())
@@ -64,14 +67,15 @@ class WafeFilenames:
 
         new_filenames = []
         vtypes = WafeFilenames.VTYPES
+        vformats = WafeFilenames.VFORMATS
         itype = WafeFilenames.IMGTYPE
 
-        for id_key in self.data:
+        for id_key in self.split_filenames:
             # make this scalable to different vals
             creative_vids = 0
             campaign_vids = 0
 
-            in_ids = self.data[id_key]
+            in_ids = self.split_filenames[id_key]
 
             for asset_key in in_ids:
                 # get dict object within each asset key
@@ -80,59 +84,83 @@ class WafeFilenames:
                 campaign_vids += count_vids(vtypes[0], asset_obj)
                 creative_vids += count_vids(vtypes[1], asset_obj)
 
-            # count image number
-            inum = 1
-            # count video number
-            vnum = 1
+            inum = 1  # count image number
+            vnum = 1  # count video number
+            anum = 1  # additional item number
             for asset_key in in_ids:
 
                 asset = in_ids[asset_key]
                 kv = 'type'  # key value
                 tv = asset[kv]  # type value
+                ext = asset['ext'].lower()  # file extension
 
-                # if no campaign vids and 'type'='SupportingContent'
-                if tv == vtypes[1]:
-                    vnum += 1 if campaign_vids else 0
-                    # update starting from v02
-                    asset.update({kv: f'v0{vnum}'})
-                    # else increment after each starting on v01
-                    vnum += 1 if not campaign_vids else 0
-                elif tv == itype:
-                    asset.update({kv: f'f0{vnum}'})
-                    inum += 1
+                # IDv0n.ext
+                if self.name_format == 'v0':
 
-                new_filenames.append(''.join([
-                    id_key,
-                    asset[kv],
-                    asset['ext']
-                ]))
+                    # if no campaign vids and 'type'='SupportingContent'
+                    if tv == vtypes[1] and ext in vformats:
+                        vnum += 1 if campaign_vids else 0
 
-        self.rename_data = dict(zip(self.old_filenames, new_filenames))
+                        # update starting from v02
+                        asset.update({kv: f'v0{vnum}'})
+
+                        # else increment after each starting on v01
+                        vnum += 1 if not campaign_vids else 0
+
+                    elif tv == itype:
+                        asset.update({kv: f'f0{inum}'})
+                        inum += 1
+
+                    elif tv != itype and not ext in vformats:
+                        asset.update({kv: f'a0{anum}-{asset[kv]}'})
+                        anum += 1
+
+                    joined_name = ''.join([
+                        id_key,
+                        asset[kv].replace(vtypes[0], 'v01'),
+                        ext
+                    ])
+
+                # ID_asset_originaltype.ext
+                elif self.name_format == '_asset':
+                    joined_name = '_'.join([
+                        id_key, asset_key, asset[kv]
+                    ]) + ext
+
+                new_filenames.append(joined_name)
 
         return new_filenames
 
     def process(self):
         p = self.path
+
         if p.is_dir():
-            self.files = list(p.glob('*'))
+            # sort files so zip order stays correct
+            self.files = sorted(list(p.glob('*.*')))
             self.separate_filenames()
-            self.number_vids()
-            lookup = self.rename_data
+            new_names = self.order_filenames()
+
+            output = [self.old_filenames, new_names]
+            # lookup dict for filenames
+            lookup_data = dict(zip(*output))
+            # tuples for pandas csv
+            output_data = list(zip(*output))
+
             for f in self.files:
                 try:
                     fn = f.name
-                    new_name = lookup[fn]
+                    new_name = lookup_data[fn]
                     par = f.parent
                     new_file = p / new_name
-                    click.echo(fr"{fn}   ->   {new_file}")
+                    click.echo(fr"{fn}   ->   {new_name}")
 
-                    # write the output to a csv / log in the path
-
-                    # CHECK_OUPUT #### f.rename(new_file) ####
-                    break
+                    f.rename(new_file)  # CHECK_OUPUT ####
 
                 except KeyError as e:
-                    click.echo(e)
+                    print('x', e)
+
+            return output_data
+
         elif p.is_file():
             click.echo('files not accepted')
             # self.rename_file(p)
