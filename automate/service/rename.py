@@ -5,6 +5,7 @@ from pprint import pprint
 
 class WafeFilenames:
     VTYPES = ['v01', 'SupportingContent']
+    IMGTYPE = 'EntryPaper'
     # inherit this from other
 
     def __init__(self, path, ids):
@@ -44,7 +45,7 @@ class WafeFilenames:
                     self.old_filenames.append(fn)
                     asset_id = idi[1]
                     tail = {
-                        'vtype': idi[2].replace('CaseFilm', 'v01'),
+                        'type': idi[2].replace('CaseFilm', 'v01'),
                         'ext': f.suffix
                     }
                     if not new_id in self.data.keys():  # change to new_id
@@ -55,7 +56,7 @@ class WafeFilenames:
 
         return self.data
 
-    def number_filenames(self):
+    def number_vids(self):
 
         def count_vids(value: str, obj: dict):
             return sum(x == value for x in obj.values())
@@ -63,6 +64,7 @@ class WafeFilenames:
 
         new_filenames = []
         vtypes = WafeFilenames.VTYPES
+        itype = WafeFilenames.IMGTYPE
 
         for id_key in self.data:
             # make this scalable to different vals
@@ -78,25 +80,30 @@ class WafeFilenames:
                 campaign_vids += count_vids(vtypes[0], asset_obj)
                 creative_vids += count_vids(vtypes[1], asset_obj)
 
+            # count image number
+            inum = 1
             # count video number
             vnum = 1
             for asset_key in in_ids:
 
                 asset = in_ids[asset_key]
-                vk = 'vtype'  # value key
-                vt = asset[vk]  # vtype value
+                kv = 'type'  # key value
+                tv = asset[kv]  # type value
 
-                # if no campaign vids and 'vtype'='SupportingContent'
-                if vt == vtypes[1]:
+                # if no campaign vids and 'type'='SupportingContent'
+                if tv == vtypes[1]:
                     vnum += 1 if campaign_vids else 0
                     # update starting from v02
-                    asset.update({vk: f'v0{vnum}'})
+                    asset.update({kv: f'v0{vnum}'})
                     # else increment after each starting on v01
                     vnum += 1 if not campaign_vids else 0
+                elif tv == itype:
+                    asset.update({kv: f'f0{vnum}'})
+                    inum += 1
 
                 new_filenames.append(''.join([
                     id_key,
-                    asset[vk],
+                    asset[kv],
                     asset['ext']
                 ]))
 
@@ -109,7 +116,7 @@ class WafeFilenames:
         if p.is_dir():
             self.files = list(p.glob('*'))
             self.separate_filenames()
-            self.number_filenames()
+            self.number_vids()
             lookup = self.rename_data
             for f in self.files:
                 try:
