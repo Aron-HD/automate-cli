@@ -66,8 +66,14 @@ def get_ids(excelfile, sheet):
     show_default=True,
     help="The sheet within the infile you want to read. This can be the name or an index.",
 )
+@click.option(
+    "-n", "--name-format",
+    type=click.Choice(['v0', '_asset'], case_sensitive=False),
+    required=True,
+    help="The format you want files renaming with.",
+)
 @click.command()
-def cli(infile, sheet, filepath, award):
+def cli(infile, sheet, filepath, award, name_format):
     """Rename files for the WARC Awards for Effectiveness."""
     click.echo('\nINPUT: ' + click.style(filepath, fg='yellow'))
     ids = get_ids(infile, sheet)
@@ -76,7 +82,11 @@ def cli(infile, sheet, filepath, award):
         rf = rename.RenameFile(filepath, ids, award)
         rf.runprocess()
     elif not award:
-        fn = rename.WafeFilenames(filepath, ids)
-        fn.process()
+        fn = rename.WafeFilenames(filepath, ids, name_format)
+        out_data = fn.process()
+
+        # write output csv to input path
+        dfo = pd.DataFrame(out_data, columns=['Old', 'New'])
+        dfo.to_csv(fn.output_filename, index=False)
 
         # print(len(new_names))
