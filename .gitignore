@@ -4,3 +4,4 @@ campaigndetails/
 automate.egg-info/
 notes.md
 sandbox.py
+*.pyc
