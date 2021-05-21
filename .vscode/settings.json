@@ -1,6 +1,16 @@
 {
     "python.pythonPath": "C:\\Users\\arondavidson\\.virtualenvs\\automate-teHEvaLu\\Scripts\\python.exe",
-    "python.formatting.provider": "autopep8",
+    "python.formatting.provider": "yapf",
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "python.testing.pytestArgs": [
+        "tests"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.nosetestsEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.analysis.extraPaths": [
+        "./automate"
+    ]
+
 }

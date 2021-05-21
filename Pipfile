@@ -4,15 +4,14 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest = "*"
-v = {editable = true,version = "*"}
-autopep8 = "*"
+yapf = "*"
 pylint = "*"
+pytest = "*"
 
 [packages]
-click = "*"
+automate = {editable = true,path = "."}
+click = "==7.1.2"
 pandas = "*"
-xlrd = "*"
 openpyxl = "*"
 
 [requires]

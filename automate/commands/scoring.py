@@ -75,8 +75,8 @@ def cli(ctx):
     "-c", "--create_type",
     required=True,
     default=Context.DEFAULT_CREATE,
-    type=click.Choice(['scoresheets', 'marks', 'picks'], case_sensitive=False)
-    help="Select what spreadsheets to create.",
+    type=click.Choice(['scoresheets', 'marks', 'picks'], case_sensitive=False),
+    help="Select what spreadsheets to create."
 )
 @click.pass_context
 def create(ctx, infile, path, outfile, award, create_type):
