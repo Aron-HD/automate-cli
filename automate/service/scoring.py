@@ -1,12 +1,11 @@
 from glob import glob
 from pathlib import Path
 import pandas as pd
-from natsort import natsorted
+# from natsort import natsorted
 
 
 class Collate:
     """docstring for Collate."""
-
     def __init__(self, data):
         self.data = data
 
@@ -17,7 +16,6 @@ class Collate:
 
 class JudgeScores:
     """Read score data, judge details and calculations based on scores from scoresheet."""
-
     def __init__(self, scoresheet):
         self.scoresheet = Path(scoresheet)
         self.judge_scores = None
@@ -26,8 +24,10 @@ class JudgeScores:
     def read_scores(self):
         """Read the scores from the scoresheet and return a dataframe."""
 
-        df = pd.read_excel(self.scoresheet,  # na_filter=False,
-                           index_col=None, header=None)
+        df = pd.read_excel(
+            self.scoresheet,  # na_filter=False,
+            index_col=None,
+            header=None)
         # get score rows only by seeing if ID integers are present after filtered first col NaNs
         score_rows = df[df[0].fillna('').str.isdigit()]
 
@@ -45,7 +45,8 @@ class JudgeScores:
         totals = find_scores(col=10)
         # concat paper cols with total scores and drop index
         score_data = pd.concat(
-            [score_rows[0], score_rows[1], score_rows[2], totals], axis=1).reset_index(drop=True)
+            [score_rows[0], score_rows[1], score_rows[2], totals],
+            axis=1).reset_index(drop=True)
         # rename columns
         score_data.columns = ['ID', 'Ref', 'Paper', 'Score']
         self.judge_scores = score_data
@@ -64,14 +65,14 @@ class JudgeScores:
         elif info_items == 2:
             judge_info = dict(zip(keys, [info[0], None, info[1]]))
         else:
-            print(f'Incorrect filename info from {self.file.name}', info)
+            print(f'Incorrect filename info from {self.scoresheet.name}', info)
             judge_info = None
 
         if judge_info:
             try:
                 # Extract group integer from group string in filename
-                judge_info['Group'] = int(
-                    ''.join(filter(str.isdigit, judge_info['Group'])))
+                judge_info['Group'] = int(''.join(
+                    filter(str.isdigit, judge_info['Group'])))
 
                 self.judge.update(judge_info)
             except TypeError as e:
@@ -87,7 +88,7 @@ class JudgeScores:
             judge_formulas = {
                 'ScoreCount': sc.count(),  # check if counts 0 and nan
                 'ScoreAverage': sc.mean(),  # sc.sum()/count
-                'ScoreMinmax': sc.max()-sc.min()
+                'ScoreMinmax': sc.max() - sc.min()
             }
 
             return self.judge.update(judge_formulas)
@@ -100,8 +101,7 @@ class CreateAsset(object):
     JUDGES_COLS = ['Name', 'Surname', 'Company', 'Group']
     PAPER_COLS = ['PaperGroup', 'ID', 'Ref', 'Title']
 
-    def __init__(self, path, outfile, award,
-                 create_type, excel_file):
+    def __init__(self, path, outfile, award, create_type, excel_file):
         self.path = path
         self.outfile = outfile
         self.award = award
@@ -121,14 +121,14 @@ class CreateAsset(object):
         print(groups)
         # filter papers by group, n+1 as mismatch of group start at 1 vs index 0
         grouped_frames = [
-            dfg[dfg[gc[0]] == n] for n in range(1, len(groups)+1)
+            dfg[dfg[gc[0]] == n] for n in range(1,
+                                                len(groups) + 1)
         ]
         return enumerate(grouped_frames, start=1)
 
     def consolidated_marks(self, excel_sheet):
         """Make consolidated marks spreadsheet from main spreadsheet data."""
-        frame1 = pd.read_excel(
-            self.excel_file, sheet_name=excel_sheet)
+        frame1 = pd.read_excel(self.excel_file, sheet_name=excel_sheet)
         judges = self.get_groups(frame1, CreateAsset.JUDGES_COLS)
         papers = self.get_groups(frame1, CreateAsset.PAPER_COLS)
 
@@ -142,8 +142,7 @@ class CreateAsset(object):
 
     def scoresheets(self, excel_sheet, category: str = None):
         """Make each group's scoresheets from main spreadsheet data."""
-        frame2 = pd.read_excel(
-            self.excel_file, sheet_name=excel_sheet)
+        frame2 = pd.read_excel(self.excel_file, sheet_name=excel_sheet)
         grouped_papers = self.get_groups(frame2, CreateAsset.PAPER_COLS)
 
         fns = []
