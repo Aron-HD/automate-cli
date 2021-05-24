@@ -73,6 +73,7 @@ def test_split_stem(wf):
 def test_order_filenames(wf, example_data):
     assert wf.order_filenames(example_data[2]) == [
         '137444a01-SupportingContent.mk4', '137444v02.mp4', '137444v01.mov',
-        '137444a02-SupportingContent.jpg'
+        '137444f01.docx', '137444a02-Appendix.pdf',
+        '137444a03-SupportingContent.jpg'
     ]
     assert wf.order_filenames({}) == []
