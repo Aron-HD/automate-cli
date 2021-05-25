@@ -1,21 +1,89 @@
 from glob import glob
 from pathlib import Path
 import pandas as pd
-# from natsort import natsorted
+from numpy import nan
+from functools import reduce
+import pandas.io.formats.excel
+pandas.io.formats.excel.ExcelFormatter.header_style = None
 
 
-class Collate:
+class CollateScores:
     """docstring for Collate."""
-    def __init__(self, data):
-        self.data = data
 
-    def write_csv(self, filename):
-        self.data.to_csv(filename)
-        return
+    def __init__(self, scoresheets_path, out_filename):
+        self.scoresheets_path = Path(scoresheets_path)
+        self.out_filename = Path(r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize') / f'{out_filename}.xlsx'
+        self.data = None
+
+    def write_sheet(self):
+        new_file = self.out_filename
+        self.data.to_csv(new_file)
+        return ''.join(['Wrote: ', new_file.name])
+
+    def group_all_scoresheets(self):
+        grouped_dfs = []
+        for scoresheet in self.scoresheets_path.glob('*GROUP*.xlsx'):
+            print(scoresheet.name)
+            JS = JudgeScores(scoresheet)
+            output = JS()
+            grouped_dfs.append(output)
+        return grouped_dfs
+
+    def merge_group_scores(self, group_frames):
+        # get unique group values
+        df_merged = reduce(
+            lambda left, right: pd.merge(
+                left, right,
+                left_index=True,
+                right_index=True,
+                on=JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
+            ), group_frames
+        )
+        return df_merged
+        # return pd.concat(group_frames, axis=1, join='inner')
+
+    def __call__(self):
+
+        all_dfs = self.group_all_scoresheets()
+        groups = list(set(frm.iloc[0, 3] for frm in all_dfs))
+
+        with pd.ExcelWriter(self.out_filename, engine='xlsxwriter') as writer:
+            wkb = writer.book
+            for n in groups:
+                print(n)
+                frames = list(filter(lambda fr: fr.iloc[0, 3] == n, all_dfs))
+                merged_scores = self.merge_group_scores(frames)
+                sheetname = f'Group {n}'
+                merged_scores.to_excel(
+                    writer, sheet_name=sheetname, index=False)
+                wks = writer.sheets[sheetname]
+                # set papers col widest
+                col_format = wkb.add_format(
+                    {'bg_color': '#000000', 'font_color': '#ffffff'})
+                # wks.conditional_format(
+                #     'A1:C200', {'type': 'no_blanks', 'format': col_format})
+
+                wks.set_column('A:B', 14)
+                wks.set_column('C:C', 55)
+                wks.set_column('D:Z', 18)
+
+                header_format = wkb.add_format({'bold': True})
+                wks.set_row(0, None, header_format)
+
+                wks.conditional_format(
+                    'A1:Z1', {'type': 'no_blanks', 'format': col_format})
+                scores_format = wkb.add_format({'bg_color': '#C6EFCE'})
+                wks.conditional_format(
+                    'D3:Z200', {'type': 'no_blanks', 'format': scores_format})
+                # self.data = merged_scores
+                # self.write_sheet()
+                # break
 
 
 class JudgeScores:
     """Read score data, judge details and calculations based on scores from scoresheet."""
+    data_columns = ['ID', 'Ref', 'Paper', 'Score']
+
     def __init__(self, scoresheet):
         self.scoresheet = Path(scoresheet)
         self.judge_scores = None
@@ -24,12 +92,9 @@ class JudgeScores:
     def read_scores(self):
         """Read the scores from the scoresheet and return a dataframe."""
 
-        df = pd.read_excel(
-            self.scoresheet,  # na_filter=False,
-            index_col=None,
-            header=None)
+        df = pd.read_excel(self.scoresheet, index_col=None, header=None)
         # get score rows only by seeing if ID integers are present after filtered first col NaNs
-        score_rows = df[df[0].fillna('').str.isdigit()]
+        score_rows = df[df[0].fillna(nan).astype(str).str.isdigit()]
 
         # ToDo - sort on ID
 
@@ -37,18 +102,19 @@ class JudgeScores:
             # base case
             try:
                 # convert so can hold NA
-                return score_rows.iloc[:, col].astype('Int64')
+                return score_rows.iloc[:, col].astype('float')
             except IndexError:
                 return find_scores(col - 1)
 
         # find total score col recursively
-        totals = find_scores(col=10)
+        totals = find_scores(col=9)
         # concat paper cols with total scores and drop index
         score_data = pd.concat(
             [score_rows[0], score_rows[1], score_rows[2], totals],
             axis=1).reset_index(drop=True)
         # rename columns
-        score_data.columns = ['ID', 'Ref', 'Paper', 'Score']
+        score_data.columns = JudgeScores.data_columns
+
         self.judge_scores = score_data
         return score_data
 
@@ -80,20 +146,63 @@ class JudgeScores:
 
         return judge_info
 
-    def calculate_judge_formulas(self):
+    def calculate_formulas(self):
 
-        if self.judge_scores is not None:
+        dfj = self.judge_scores
 
-            sc = self.judge_scores.Score
+        if dfj is not None:
+            sc = dfj.Score
+            # build a Series with scores
             judge_formulas = {
-                'ScoreCount': sc.count(),  # check if counts 0 and nan
-                'ScoreAverage': sc.mean(),  # sc.sum()/count
-                'ScoreMinmax': sc.max() - sc.min()
+                'JudgeCount': sc.count(),  # check if counts 0 and nan
+                'JudgeAverage': sc.mean(),  # sc.sum()/count
+                'JudgeMinmax': sc.max() - sc.min()
             }
+            # append forumlas to judge dict
+            self.judge.update(judge_formulas)
+            # make the formulas into a dataframe
+            calcs = pd.DataFrame.from_dict(
+                data={'ID': list(judge_formulas.keys(
+                )), 'Score': list(judge_formulas.values())},
+                # orient='index',
+                # columns=['ID', 'Score']
+            )
+            # set Group number below score heading
+            group = pd.DataFrame.from_dict(
+                data={0: ['Group', '', '', self.judge['Group']]},
+                orient='index',
+                columns=JudgeScores.data_columns,
+                dtype=object
+            )
+            # group.set_index(['ID'], inplace=True)
+            # dfj.set_index('ID', inplace=True)
+            # concatenate them on Score column
+            df2 = pd.concat([group, dfj, calcs], axis=0)
 
-            return self.judge.update(judge_formulas)
+            def score_formula(s):
+                return (s - judge_formulas['JudgeAverage']) / judge_formulas['JudgeMinmax']*100
+
+            dfj['Score'] = dfj['Score'].apply(score_formula)
+            with_diving_scores = pd.concat([df2, dfj], axis=0)
+
+            with_diving_scores.rename(
+                columns={'Score': self.judge['Judge']}, inplace=True
+            )
+            # df2.rename(
+            #     columns={'Score': self.judge['Judge']}, inplace=True
+            # )
+
+            return with_diving_scores
         else:
             return None
+
+    def __call__(self):
+        self.get_judge()
+        self.read_scores()
+        modified_scores = self.calculate_formulas()
+        modified_scores.reset_index(inplace=True, drop=True)
+        # {'group': self.judge['Group'], 'scores': modified_scores}
+        return modified_scores
 
 
 class CreateAsset(object):
@@ -172,21 +281,23 @@ class CreateAsset(object):
 
 if __name__ == '__main__':
 
-    scoresheet_file = r"T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2020 Awards\2. MENA Prize\Returned scoresheets\Tarek El Kady - GROUP 3.xlsx"
     infile = r'D:\2021 Awards\2021 2. MENA Prize\MENA 2021 EDIT.xlsx'
     outfile = r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize\test.csv'
     path = r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize'
     DEFAULT_CREATE = 'marks'
     award = 'mena'
     sheetnum = 1
-    JS = JudgeScores(scoresheet_file)
-    JS.get_judge()
-    JS.read_scores()
-    JS.calculate_judge_formulas()
-    print(JS.judge_scores)
-    print(JS.judge)
 
-    # CS = Collate(scores)
+    # scoresheets_path = r"T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets"
+    scoresheets_path = r"C:\Users\arondavidson\Scripts\Test\2. MENA Prize\scoresheets"
+
+    CS = CollateScores(scoresheets_path, DEFAULT_CREATE)
+    CS()
+    # CS.write_csv(outfile)
+
+    # frame_output = pd.merge(*groups, how='outer', on=['ID', 'Ref', 'Paper'])
+    # print(d.columns)
+
     # create = CreateAsset(
     #     path=path,
     #     award=award,
