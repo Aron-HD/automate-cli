@@ -1,7 +1,7 @@
 from glob import glob
 from pathlib import Path
 import pandas as pd
-from numpy import nan
+import numpy as np
 from functools import reduce
 import pandas.io.formats.excel
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -30,35 +30,51 @@ class CollateScores:
             modified_scores = JS.calculate_formulas()
             # modified_scores = JS.diving_scores()
 
-            # modified_scores.reset_index(inplace=True, drop=True)
-            # output = JS()
+            output = modified_scores
             grouped_dfs.append(output)
         return grouped_dfs
 
     def merge_group_scores(self, group_frames):
         # get unique group values
+        cols = JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
         df_merged = reduce(
             lambda left, right: pd.merge(
                 left, right,
                 left_index=True,
                 right_index=True,
-                on=JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
+                on=cols
             ), group_frames
         )
+        # get only judge score columns by removing ID, Ref and Paper
+        judge_score_cols = list(set(df_merged.columns)-set(cols))
+        jsc = df_merged[judge_score_cols]
+
+        df_merged['GroupAverageScore'] = jsc.mean(axis=1)
+
+        diving_style_formula = \
+            (jsc.sum(axis=1) -
+             (jsc.min(axis=1) + jsc.max(axis=1))) / \
+            (jsc.count(axis=1) - 2)
+
+        df_merged['GroupDivingStyle'] = diving_style_formula
+
         return df_merged
         # return pd.concat(group_frames, axis=1, join='inner')
 
     def __call__(self):
 
         all_dfs = self.group_all_scoresheets()
-        groups = list(set(frm.iloc[0, 3] for frm in all_dfs))
+
+        groups = list(set(list(frm.keys())[0] for frm in all_dfs))
 
         with pd.ExcelWriter(self.out_filename, engine='xlsxwriter') as writer:
             wkb = writer.book
             for n in groups:
                 print(n)
-                frames = list(filter(lambda fr: fr.iloc[0, 3] == n, all_dfs))
-                merged_scores = self.merge_group_scores(frames)
+                frames = list(
+                    filter(lambda fr: list(fr.keys())[0] == n, all_dfs))
+                group_scores = [list(frm.values())[0] for frm in frames]
+                merged_scores = self.merge_group_scores(group_scores)
                 sheetname = f'Group {n}'
                 merged_scores.to_excel(
                     writer, sheet_name=sheetname, index=False)
@@ -80,7 +96,7 @@ class CollateScores:
                     'A1:Z1', {'type': 'no_blanks', 'format': col_format})
                 scores_format = wkb.add_format({'bg_color': '#C6EFCE'})
                 wks.conditional_format(
-                    'D3:Z200', {'type': 'no_blanks', 'format': scores_format})
+                    'D2:Z200', {'type': 'no_blanks', 'format': scores_format})
                 # self.data = merged_scores
                 # self.write_sheet()
                 # break
@@ -129,7 +145,7 @@ class JudgeScores:
 
         df = pd.read_excel(self.scoresheet, index_col=None, header=None)
         # get score rows only by seeing if ID integers are present after filtered first col NaNs
-        score_rows = df[df[0].fillna(nan).astype(str).str.isdigit()]
+        score_rows = df[df[0].fillna(np.nan).astype(str).str.isdigit()]
 
         # ToDo - sort on ID
 
@@ -155,53 +171,47 @@ class JudgeScores:
 
     def calculate_formulas(self):
 
+        sc = self.judge_scores['Score']
+        # build a Series with scores
+        judge_formulas = {
+            'JudgeCount': sc.count(),  # check if counts 0 and nan
+            'JudgeAverage': sc.mean(),  # sc.sum()/count
+            'JudgeMinmax': sc.max() - sc.min()
+        }
+        # append forumlas to judge dict
+        self.judge.update(judge_formulas)
+        # make the formulas into a dataframe
+        # maybe make keys in 'Paper' col
+        calcs = pd.DataFrame.from_dict(
+            data={'ID': list(judge_formulas.keys(
+            )), self.judge['Judge']: list(judge_formulas.values())},
+        )
+    # return calcs
+
+        # concatenate them later in CollateScores
+        # df2 = pd.concat([dfj, calcs], axis=0)
+
+    # def diving_scores(self): ########################
         dfj = self.judge_scores
 
-        if dfj is not None:
-            sc = dfj.Score  # self.judge_scores['Score']
-            # build a Series with scores
-            judge_formulas = {
-                'JudgeCount': sc.count(),  # check if counts 0 and nan
-                'JudgeAverage': sc.mean(),  # sc.sum()/count
-                'JudgeMinmax': sc.max() - sc.min()
-            }
-            # append forumlas to judge dict
-            self.judge.update(judge_formulas)
-            # make the formulas into a dataframe
-            # maybe make keys in 'Paper' col
-            calcs = pd.DataFrame.from_dict(
-                data={'ID': list(judge_formulas.keys(
-                )), self.judge['Judge']: list(judge_formulas.values())},
-            )
-        # return calcs
-            # set dfj name as group
-            group = pd.DataFrame.from_dict(
-                data={0: ['Group', '', '', self.judge['Group']]},
-                orient='index',
-                columns=JudgeScores.data_columns,
-                dtype=object
-            )
-            # concatenate them later in CollateScores
-            df2 = pd.concat([group, dfj, calcs], axis=0)
+        def score_formula(s):
+            return (s - self.judge['JudgeAverage']) / self.judge['JudgeMinmax']*100
+        dfds = self.judge_scores.copy()
+        dfds['Score'] = dfds['Score'].apply(score_formula)
+        judge_diving_scores = pd.concat([dfj, dfds], axis=0)
 
-        # def diving_scores(self): ########################
-
-            def score_formula(s):
-                return (s - self.judge['JudgeAverage']) / self.judge['JudgeMinmax']*100
-            # dfj = self.judge_scores
-            dfj['Score'] = dfj['Score'].apply(score_formula)
-            judge_diving_scores = pd.concat([df2, dfj], axis=0)
-
-            judge_diving_scores.rename(
-                columns={'Score': self.judge['Judge']}, inplace=True
-            )
-            # df2.rename(
-            #     columns={'Score': self.judge['Judge']}, inplace=True
-            # )
-
-            return judge_diving_scores
-        else:
-            return None
+        judge_diving_scores.rename(
+            columns={'Score': self.judge['Judge']}, inplace=True
+        )
+        # print(judge_diving_scores)
+        # df2.rename(
+        #     columns={'Score': self.judge['Judge']}, inplace=True
+        # )
+        judge_diving_scores.reset_index(inplace=True, drop=True)
+        # label dataframe with group number
+        return {self.judge['Group']: judge_diving_scores}
+        # else:
+        #     return None
 
     def __call__(self):
         # move to Collate Class
