@@ -48,7 +48,7 @@ class CollateScores:
         # get only judge score columns by removing ID, Ref and Paper
         judge_score_cols = list(set(merged_group.columns)-set(cols))
         jsc = merged_group[judge_score_cols]
-
+        # apply group level formulas and create columns
         merged_group['GroupAverageScore'] = jsc.mean(axis=1)
 
         diving_style_formula = \
