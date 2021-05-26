@@ -139,6 +139,7 @@ class JudgeScores:
                 # Extract group integer from group string in filename
                 judge_info['Group'] = int(''.join(
                     filter(str.isdigit, judge_info['Group'])))
+                # set name of df = self.judge['Group']
 
                 self.judge.update(judge_info)
             except TypeError as e:
@@ -151,7 +152,7 @@ class JudgeScores:
         dfj = self.judge_scores
 
         if dfj is not None:
-            sc = dfj.Score
+            sc = dfj.Score  # self.judge_scores['Score']
             # build a Series with scores
             judge_formulas = {
                 'JudgeCount': sc.count(),  # check if counts 0 and nan
@@ -161,47 +162,47 @@ class JudgeScores:
             # append forumlas to judge dict
             self.judge.update(judge_formulas)
             # make the formulas into a dataframe
+            # maybe make keys in 'Paper' col
             calcs = pd.DataFrame.from_dict(
                 data={'ID': list(judge_formulas.keys(
-                )), 'Score': list(judge_formulas.values())},
-                # orient='index',
-                # columns=['ID', 'Score']
+                )), self.judge['Judge']: list(judge_formulas.values())},
             )
-            # set Group number below score heading
+        # return calcs
+            # set dfj name as group
             group = pd.DataFrame.from_dict(
                 data={0: ['Group', '', '', self.judge['Group']]},
                 orient='index',
                 columns=JudgeScores.data_columns,
                 dtype=object
             )
-            # group.set_index(['ID'], inplace=True)
-            # dfj.set_index('ID', inplace=True)
-            # concatenate them on Score column
+            # concatenate them later in CollateScores
             df2 = pd.concat([group, dfj, calcs], axis=0)
 
+        # def diving_scores(self): ########################
+
             def score_formula(s):
-                return (s - judge_formulas['JudgeAverage']) / judge_formulas['JudgeMinmax']*100
-
+                return (s - self.judge['JudgeAverage']) / self.judge['JudgeMinmax']*100
+            # dfj = self.judge_scores
             dfj['Score'] = dfj['Score'].apply(score_formula)
-            with_diving_scores = pd.concat([df2, dfj], axis=0)
+            judge_diving_scores = pd.concat([df2, dfj], axis=0)
 
-            with_diving_scores.rename(
+            judge_diving_scores.rename(
                 columns={'Score': self.judge['Judge']}, inplace=True
             )
             # df2.rename(
             #     columns={'Score': self.judge['Judge']}, inplace=True
             # )
 
-            return with_diving_scores
+            return judge_diving_scores
         else:
             return None
 
     def __call__(self):
+        # move to Collate Class
         self.get_judge()
         self.read_scores()
         modified_scores = self.calculate_formulas()
         modified_scores.reset_index(inplace=True, drop=True)
-        # {'group': self.judge['Group'], 'scores': modified_scores}
         return modified_scores
 
 
