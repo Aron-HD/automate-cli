@@ -25,7 +25,13 @@ class CollateScores:
         for scoresheet in self.scoresheets_path.glob('*GROUP*.xlsx'):
             print(scoresheet.name)
             JS = JudgeScores(scoresheet)
-            output = JS()
+            JS.get_judge()
+            JS.read_scores()
+            modified_scores = JS.calculate_formulas()
+            # modified_scores = JS.diving_scores()
+
+            # modified_scores.reset_index(inplace=True, drop=True)
+            # output = JS()
             grouped_dfs.append(output)
         return grouped_dfs
 
@@ -89,35 +95,6 @@ class JudgeScores:
         self.judge_scores = None
         self.judge = {}
 
-    def read_scores(self):
-        """Read the scores from the scoresheet and return a dataframe."""
-
-        df = pd.read_excel(self.scoresheet, index_col=None, header=None)
-        # get score rows only by seeing if ID integers are present after filtered first col NaNs
-        score_rows = df[df[0].fillna(nan).astype(str).str.isdigit()]
-
-        # ToDo - sort on ID
-
-        def find_scores(col: int):
-            # base case
-            try:
-                # convert so can hold NA
-                return score_rows.iloc[:, col].astype('float')
-            except IndexError:
-                return find_scores(col - 1)
-
-        # find total score col recursively
-        totals = find_scores(col=9)
-        # concat paper cols with total scores and drop index
-        score_data = pd.concat(
-            [score_rows[0], score_rows[1], score_rows[2], totals],
-            axis=1).reset_index(drop=True)
-        # rename columns
-        score_data.columns = JudgeScores.data_columns
-
-        self.judge_scores = score_data
-        return score_data
-
     def get_judge(self):
         """Get the judges name, group and category from the scoresheet."""
 
@@ -146,6 +123,35 @@ class JudgeScores:
                 raise e
 
         return judge_info
+
+    def read_scores(self):
+        """Read the scores from the scoresheet and return a dataframe."""
+
+        df = pd.read_excel(self.scoresheet, index_col=None, header=None)
+        # get score rows only by seeing if ID integers are present after filtered first col NaNs
+        score_rows = df[df[0].fillna(nan).astype(str).str.isdigit()]
+
+        # ToDo - sort on ID
+
+        def find_scores(col: int):
+            # base case
+            try:
+                # convert so can hold NA
+                return score_rows.iloc[:, col].astype('float')
+            except IndexError:
+                return find_scores(col - 1)
+
+        # find total score col recursively
+        totals = find_scores(col=9)
+        # concat paper cols with total scores and drop index
+        score_data = pd.concat(
+            [score_rows[0], score_rows[1], score_rows[2], totals],
+            axis=1).reset_index(drop=True)
+        # rename columns
+        score_data.columns = JudgeScores.data_columns
+
+        self.judge_scores = score_data
+        return score_data
 
     def calculate_formulas(self):
 
@@ -200,10 +206,10 @@ class JudgeScores:
     def __call__(self):
         # move to Collate Class
         self.get_judge()
-        self.read_scores()
-        modified_scores = self.calculate_formulas()
-        modified_scores.reset_index(inplace=True, drop=True)
-        return modified_scores
+        # self.read_scores()
+        # modified_scores = self.calculate_formulas()
+        # modified_scores.reset_index(inplace=True, drop=True)
+        # return modified_scores
 
 
 class CreateAsset(object):
