@@ -37,7 +37,7 @@ class CollateScores:
     def merge_group_scores(self, group_frames):
         # get unique group values
         cols = JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
-        df_merged = reduce(
+        merged_group = reduce(
             lambda left, right: pd.merge(
                 left, right,
                 left_index=True,
@@ -46,19 +46,19 @@ class CollateScores:
             ), group_frames
         )
         # get only judge score columns by removing ID, Ref and Paper
-        judge_score_cols = list(set(df_merged.columns)-set(cols))
-        jsc = df_merged[judge_score_cols]
+        judge_score_cols = list(set(merged_group.columns)-set(cols))
+        jsc = merged_group[judge_score_cols]
 
-        df_merged['GroupAverageScore'] = jsc.mean(axis=1)
+        merged_group['GroupAverageScore'] = jsc.mean(axis=1)
 
         diving_style_formula = \
             (jsc.sum(axis=1) -
              (jsc.min(axis=1) + jsc.max(axis=1))) / \
             (jsc.count(axis=1) - 2)
 
-        df_merged['GroupDivingStyle'] = diving_style_formula
+        merged_group['GroupDivingStyle'] = diving_style_formula
 
-        return df_merged
+        return merged_group
         # return pd.concat(group_frames, axis=1, join='inner')
 
     def __call__(self):
