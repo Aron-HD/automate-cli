@@ -70,35 +70,33 @@ class CollateScores:
         with pd.ExcelWriter(self.out_filename, engine='xlsxwriter') as writer:
             wkb = writer.book
             for n in groups:
-                print(n)
+                print(f'Group {n}')
                 frames = list(
-                    filter(lambda fr: list(fr.keys())[0] == n, all_dfs))
+                    filter(lambda fr: list(fr.keys())[0] == n, all_dfs)
+                )
                 group_scores = [list(frm.values())[0] for frm in frames]
                 merged_scores = self.merge_group_scores(group_scores)
                 sheetname = f'Group {n}'
                 merged_scores.to_excel(
                     writer, sheet_name=sheetname, index=False)
                 wks = writer.sheets[sheetname]
-                # set papers col widest
                 col_format = wkb.add_format(
                     {'bg_color': '#000000', 'font_color': '#ffffff'})
-                # wks.conditional_format(
-                #     'A1:C200', {'type': 'no_blanks', 'format': col_format})
 
                 wks.set_column('A:B', 14)
-                wks.set_column('C:C', 55)
+                wks.set_column('C:C', 55)  # set papers col widest
                 wks.set_column('D:Z', 18)
 
                 header_format = wkb.add_format({'bold': True})
-                wks.set_row(0, None, header_format)
-
-                wks.conditional_format(
-                    'A1:Z1', {'type': 'no_blanks', 'format': col_format})
                 scores_format = wkb.add_format({'bg_color': '#C6EFCE'})
+
+                wks.set_row(0, None, header_format)
                 wks.conditional_format(
-                    'D2:Z200', {'type': 'no_blanks', 'format': scores_format})
-                # self.data = merged_scores
-                # self.write_sheet()
+                    'A1:Z1', {'type': 'no_blanks', 'format': col_format}
+                )
+                wks.conditional_format(
+                    'D2:Z200', {'type': 'no_blanks', 'format': scores_format}
+                )
                 # break
 
 
