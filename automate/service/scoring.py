@@ -8,12 +8,12 @@ pandas.io.formats.excel.ExcelFormatter.header_style = None
 
 
 class CollateScores:
-    """docstring for Collate."""
+    """Collate all scoresheets in a given folder into a Consolidated marks spreadsheet."""
 
     def __init__(self, scoresheets_path, out_filename):
         self.scoresheets_path = Path(scoresheets_path)
-        self.out_filename = Path(r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize') / f'{out_filename}.xlsx'
-        self.all_dfs = None
+        self.out_filename = scoresheets_path / f'{out_filename}.xlsx'
+        self.all_dfs = []
         self.all_papers_scores = []
         self.all_papers_diving = []
 
@@ -26,6 +26,10 @@ class CollateScores:
             JS.read_scores()
             modified_scores = JS.calculate_formulas()
             # modified_scores = JS.diving_scores()
+
+            # ToDo:
+            # - separate func calls
+            # - concat formulas and store in self.judge_calculations
 
             output = modified_scores
             grouped_dfs.append(output)
@@ -58,17 +62,15 @@ class CollateScores:
             (jsc.count(axis=1) - 2)
 
         merged_group['GroupDivingStyle'] = diving_style_formula
-        # append only group score cols to all_papers_scores
 
         def split_diving_style():
+            # get only group score cols
             group_score_columns = reduce_list(
-                merged_group.columns, judge_score_cols
-            )
+                merged_group.columns, judge_score_cols)
             gsc = merged_group[group_score_columns]
             # split scores and diving style
             rows = len(gsc.index)
             split = int(rows / 2)
-            print(split)
             non_diving = gsc.iloc[:split, :]
             diving = gsc.iloc[split:, :]
             # append to separate lists to merge and rank separately
@@ -76,13 +78,10 @@ class CollateScores:
             self.all_papers_diving.append(diving)
 
         split_diving_style()
-
         return merged_group
-        # return pd.concat(group_frames, axis=1, join='inner')
 
     def rank_scored_papers(self, pscores):
         apsc = pd.concat(pscores, axis='index')
-        # name rank differently for diving
         apsc['Rank'] = apsc['GroupAverageScore'].rank(ascending=False)
         apsc['DivingRank'] = apsc['GroupDivingStyle'].rank(ascending=False)
         apsc.sort_values('Rank', ascending=True, inplace=True)
@@ -91,15 +90,18 @@ class CollateScores:
     def concatenate_shortlist(self):
         straight = self.rank_scored_papers(self.all_papers_scores)
         diving = self.rank_scored_papers(self.all_papers_diving)
-        # change col order and sort rank if DivingStyle calculates correctly
+        col_order = ['GroupDivingStyle', 'DivingRank',
+                     'GroupAverageScore', 'ID', 'Paper', 'Ref', 'Rank']
+
+        # change col order and sort if straight DivingStyle calculates correctly
         if not straight['DivingRank'].isnull().values.any():
             straight.sort_values('DivingRank', ascending=True, inplace=True)
-            col_order = ['GroupAverageScore', 'Rank',
+            alt_order = ['GroupAverageScore', 'Rank',
                          'GroupDivingStyle', 'ID', 'Paper', 'Ref', 'DivingRank']
+            straight = straight[alt_order]
         else:
-            col_order = ['GroupDivingStyle', 'DivingRank',
-                         'GroupAverageScore', 'ID', 'Paper', 'Ref', 'Rank']
-        straight = straight[col_order]
+            straight = straight[col_order]
+
         col_order.reverse()
         diving = diving[col_order]
         diving.reset_index(drop=True, inplace=True)
@@ -137,6 +139,10 @@ class CollateScores:
     def format_shortlist(wkb, wks):
         pass
 
+        # TODO:
+        # - add width to papers column
+        # - add conditional format to top 20 of each Ref col
+
     def write_shortlist(self, writer):
         shortlist_name = 'Shortlist calculation'
         shortlist = self.concatenate_shortlist()
@@ -158,10 +164,9 @@ class CollateScores:
             self.format_shortlist(workbook, xlwriter.sheets[shortlist_sheet])
 
     def __call__(self):
-
         self.all_dfs = self.group_all_scoresheets()
         self.write_consolidated_marks()
-        print(f'Wrote: {self.out_filename}')
+        return self.out_filename
 
 
 class JudgeScores:
@@ -175,10 +180,8 @@ class JudgeScores:
 
     def get_judge(self):
         """Get the judges name, group and category from the scoresheet."""
-
         info = self.scoresheet.stem.split(' - ')
         info_items = len(info)
-
         keys = ['Judge', 'Category', 'Group']
 
         if info_items == 3:
@@ -191,11 +194,9 @@ class JudgeScores:
 
         if judge_info:
             try:
-                # Extract group integer from group string in filename
+                # Extract group integer from end of filename
                 judge_info['Group'] = int(''.join(
                     filter(str.isdigit, judge_info['Group'])))
-                # set name of df = self.judge['Group']
-
                 self.judge.update(judge_info)
             except TypeError as e:
                 raise e
@@ -212,14 +213,13 @@ class JudgeScores:
         # ToDo - sort on ID
 
         def find_scores(col: int):
-            # base case
+            """Find correct total score column recursively."""
             try:
                 # convert so can hold NA
                 return score_rows.iloc[:, col].astype('float')
             except IndexError:
                 return find_scores(col - 1)
 
-        # find total score col recursively
         totals = find_scores(col=9)
         # concat paper cols with total scores and drop index
         score_data = pd.concat(
@@ -227,22 +227,20 @@ class JudgeScores:
             axis=1).reset_index(drop=True)
         # rename columns
         score_data.columns = JudgeScores.data_columns
-
         self.judge_scores = score_data
         return score_data
 
     def calculate_formulas(self):
 
         sc = self.judge_scores['Score']
-        # build a Series with scores
         judge_formulas = {
             'JudgeCount': sc.count(),  # check if counts 0 and nan
             'JudgeAverage': sc.mean(),  # sc.sum()/count
             'JudgeMinmax': sc.max() - sc.min()
         }
-        # append forumlas to judge dict
+        # add formulas to judge info dict
         self.judge.update(judge_formulas)
-        # make the formulas into a dataframe
+        # make formulas into dataframe for merging all
         # maybe make keys in 'Paper' col
         calcs = pd.DataFrame.from_dict(
             data={'ID': list(judge_formulas.keys(
@@ -250,8 +248,8 @@ class JudgeScores:
         )
     # return calcs
 
-        # concatenate them later in CollateScores
-        # df2 = pd.concat([dfj, calcs], axis=0)
+        # ToDo:
+        # - split to separate functions so can collate formulas and add at end
 
     # def diving_scores(self): ########################
         dfj = self.judge_scores
@@ -276,12 +274,7 @@ class JudgeScores:
         #     return None
 
     def __call__(self):
-        # move to Collate Class
         self.get_judge()
-        # self.read_scores()
-        # modified_scores = self.calculate_formulas()
-        # modified_scores.reset_index(inplace=True, drop=True)
-        # return modified_scores
 
 
 class CreateAsset(object):
