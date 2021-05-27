@@ -1,7 +1,7 @@
 from glob import glob
 from pathlib import Path
 import pandas as pd
-import numpy as np
+from numpy import nan
 from functools import reduce
 import pandas.io.formats.excel
 pandas.io.formats.excel.ExcelFormatter.header_style = None
@@ -207,7 +207,7 @@ class JudgeScores:
 
         df = pd.read_excel(self.scoresheet, index_col=None, header=None)
         # get score rows only by seeing if ID integers are present after filtered first col NaNs
-        score_rows = df[df[0].fillna(np.nan).astype(str).str.isdigit()]
+        score_rows = df[df[0].fillna(nan).astype(str).str.isdigit()]
 
         # ToDo - sort on ID
 
