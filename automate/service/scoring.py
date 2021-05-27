@@ -13,12 +13,9 @@ class CollateScores:
     def __init__(self, scoresheets_path, out_filename):
         self.scoresheets_path = Path(scoresheets_path)
         self.out_filename = Path(r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize') / f'{out_filename}.xlsx'
-        self.data = None
-
-    def write_sheet(self):
-        new_file = self.out_filename
-        self.data.to_csv(new_file)
-        return ''.join(['Wrote: ', new_file.name])
+        self.all_dfs = None
+        self.all_papers_scores = []
+        self.all_papers_diving = []
 
     def group_all_scoresheets(self):
         grouped_dfs = []
@@ -45,8 +42,12 @@ class CollateScores:
                 on=cols
             ), group_frames
         )
+
+        def reduce_list(a: list, b: list):
+            return list(set(a)-set(b))
+
         # get only judge score columns by removing ID, Ref and Paper
-        judge_score_cols = list(set(merged_group.columns)-set(cols))
+        judge_score_cols = reduce_list(merged_group.columns, cols)
         jsc = merged_group[judge_score_cols]
         # apply group level formulas and create columns
         merged_group['GroupAverageScore'] = jsc.mean(axis=1)
@@ -57,47 +58,110 @@ class CollateScores:
             (jsc.count(axis=1) - 2)
 
         merged_group['GroupDivingStyle'] = diving_style_formula
+        # append only group score cols to all_papers_scores
+
+        def split_diving_style():
+            group_score_columns = reduce_list(
+                merged_group.columns, judge_score_cols
+            )
+            gsc = merged_group[group_score_columns]
+            # split scores and diving style
+            rows = len(gsc.index)
+            split = int(rows / 2)
+            print(split)
+            non_diving = gsc.iloc[:split, :]
+            diving = gsc.iloc[split:, :]
+            # append to separate lists to merge and rank separately
+            self.all_papers_scores.append(non_diving)
+            self.all_papers_diving.append(diving)
+
+        split_diving_style()
 
         return merged_group
         # return pd.concat(group_frames, axis=1, join='inner')
 
+    def rank_scored_papers(self, pscores):
+        apsc = pd.concat(pscores, axis='index')
+        # name rank differently for diving
+        apsc['Rank'] = apsc['GroupAverageScore'].rank(ascending=False)
+        apsc['DivingRank'] = apsc['GroupDivingStyle'].rank(ascending=False)
+        apsc.sort_values('Rank', ascending=True, inplace=True)
+        return apsc
+
+    def concatenate_shortlist(self):
+        straight = self.rank_scored_papers(self.all_papers_scores)
+        diving = self.rank_scored_papers(self.all_papers_diving)
+        # change col order and sort rank if DivingStyle calculates correctly
+        if not straight['DivingRank'].isnull().values.any():
+            straight.sort_values('DivingRank', ascending=True, inplace=True)
+            col_order = ['GroupAverageScore', 'Rank',
+                         'GroupDivingStyle', 'ID', 'Paper', 'Ref', 'DivingRank']
+        else:
+            col_order = ['GroupDivingStyle', 'DivingRank',
+                         'GroupAverageScore', 'ID', 'Paper', 'Ref', 'Rank']
+        straight = straight[col_order]
+        col_order.reverse()
+        diving = diving[col_order]
+        diving.reset_index(drop=True, inplace=True)
+        straight.reset_index(drop=True, inplace=True)
+        diving.add_suffix('_alt')
+        return pd.concat([straight, diving], axis=1)
+
+    @staticmethod
+    def format_scores(wkb, wks):
+
+        wks.set_column('A:B', 14)
+        wks.set_column('C:C', 55)  # set papers col widest
+        wks.set_column('D:Z', 18)
+        header_format = wkb.add_format(
+            {'bold': True, 'bg_color': '#000000', 'font_color': '#ffffff'})
+        scores_format = wkb.add_format({'bg_color': '#C6EFCE'})
+        wks.conditional_format(
+            'A1:Z1', {'type': 'no_blanks', 'format': header_format}
+        )
+        wks.conditional_format(
+            'D2:Z200', {'type': 'no_blanks', 'format': scores_format}
+        )
+
+    def write_scores(self, n, writer):
+        sh = f'Group {n}'
+        print(sh)
+        # filter dataframes with keys matching group number
+        frames = list(filter(lambda fr: list(fr.keys())[0] == n, self.all_dfs))
+        group_scores = [list(frm.values())[0] for frm in frames]
+        merged_scores = self.merge_group_scores(group_scores)
+        merged_scores.to_excel(writer, sheet_name=sh, index=False)
+        return sh
+
+    @staticmethod
+    def format_shortlist(wkb, wks):
+        pass
+
+    def write_shortlist(self, writer):
+        shortlist_name = 'Shortlist calculation'
+        shortlist = self.concatenate_shortlist()
+        shortlist.to_excel(
+            writer, sheet_name=shortlist_name, index=False)
+        return shortlist_name
+
+    def write_consolidated_marks(self):
+
+        # make a list of unique group numbers
+        groups = list(set(list(frm.keys())[0] for frm in self.all_dfs))
+
+        with pd.ExcelWriter(self.out_filename, engine='xlsxwriter') as xlwriter:
+            workbook = xlwriter.book
+            for num in groups:
+                sheetname = self.write_scores(num, xlwriter)
+                self.format_scores(workbook, xlwriter.sheets[sheetname])
+            shortlist_sheet = self.write_shortlist(xlwriter)
+            self.format_shortlist(workbook, xlwriter.sheets[shortlist_sheet])
+
     def __call__(self):
 
-        all_dfs = self.group_all_scoresheets()
-
-        groups = list(set(list(frm.keys())[0] for frm in all_dfs))
-
-        with pd.ExcelWriter(self.out_filename, engine='xlsxwriter') as writer:
-            wkb = writer.book
-            for n in groups:
-                print(f'Group {n}')
-                frames = list(
-                    filter(lambda fr: list(fr.keys())[0] == n, all_dfs)
-                )
-                group_scores = [list(frm.values())[0] for frm in frames]
-                merged_scores = self.merge_group_scores(group_scores)
-                sheetname = f'Group {n}'
-                merged_scores.to_excel(
-                    writer, sheet_name=sheetname, index=False)
-                wks = writer.sheets[sheetname]
-                col_format = wkb.add_format(
-                    {'bg_color': '#000000', 'font_color': '#ffffff'})
-
-                wks.set_column('A:B', 14)
-                wks.set_column('C:C', 55)  # set papers col widest
-                wks.set_column('D:Z', 18)
-
-                header_format = wkb.add_format({'bold': True})
-                scores_format = wkb.add_format({'bg_color': '#C6EFCE'})
-
-                wks.set_row(0, None, header_format)
-                wks.conditional_format(
-                    'A1:Z1', {'type': 'no_blanks', 'format': col_format}
-                )
-                wks.conditional_format(
-                    'D2:Z200', {'type': 'no_blanks', 'format': scores_format}
-                )
-                # break
+        self.all_dfs = self.group_all_scoresheets()
+        self.write_consolidated_marks()
+        print(f'Wrote: {self.out_filename}')
 
 
 class JudgeScores:
@@ -303,10 +367,10 @@ if __name__ == '__main__':
     award = 'mena'
     sheetnum = 1
 
-    # scoresheets_path = r"T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets"
-    scoresheets_path = r"C:\Users\arondavidson\Scripts\Test\2. MENA Prize\scoresheets"
+    scoresheets_path = r"T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets"
+    # scoresheets_path = r"C:\Users\arondavidson\Scripts\Test\2. MENA Prize\scoresheets"
 
-    CS = CollateScores(scoresheets_path, DEFAULT_CREATE)
+    CS = CollateScores(scoresheets_path, '_Consolidated marks')
     CS()
     # CS.write_csv(outfile)
 
