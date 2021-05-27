@@ -12,7 +12,7 @@ class CollateScores:
 
     def __init__(self, scoresheets_path, out_filename):
         self.scoresheets_path = Path(scoresheets_path)
-        self.out_filename = scoresheets_path / f'{out_filename}.xlsx'
+        self.out_filename = self.scoresheets_path / f'{out_filename}.xlsx'
         self.all_dfs = []
         self.all_papers_scores = []
         self.all_papers_diving = []
