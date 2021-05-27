@@ -154,7 +154,7 @@ class CollateScores:
         # make a list of unique group numbers
         groups = list(set(list(frm.keys())[0] for frm in self.all_dfs))
 
-        with pd.ExcelWriter(self.out_filename, engine='xlsxwriter') as xlwriter:
+        with pd.ExcelWriter(self.out_filename) as xlwriter:
             workbook = xlwriter.book
             for num in groups:
                 sheetname = self.write_scores(num, xlwriter)
