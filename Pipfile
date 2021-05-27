@@ -13,6 +13,7 @@ automate = {editable = true,path = "."}
 click = "==7.1.2"
 pandas = "*"
 openpyxl = "*"
+xlsxwriter = "*"
 
 [requires]
 python_version = "3.7"
