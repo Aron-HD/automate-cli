@@ -5,3 +5,5 @@ automate.egg-info/
 notes.md
 sandbox.py
 *.py[cod]
+.vscode
+.pytest_cache
