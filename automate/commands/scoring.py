@@ -94,11 +94,7 @@ def create(ctx, infile, path, outfile, award, create_type):
     required=True,
     show_default=True,
     default='_Consolidated marks',
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=False,
-        readable=True, resolve_path=True
-    ),
-    help="The input excel file containing the relevant metadata.",
+    help="The name for the excel spreadsheet you want output in.",
 )
 @click.option(
     '-p', '--path',
