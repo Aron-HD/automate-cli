@@ -218,6 +218,8 @@ class JudgeScores:
                 return score_rows.iloc[:, col].astype('float')
             except IndexError:
                 return find_scores(col - 1)
+            except ValueError:
+                return find_scores(col - 1)
 
         totals = find_scores(col=9)
         # concat paper cols with total scores and drop index
