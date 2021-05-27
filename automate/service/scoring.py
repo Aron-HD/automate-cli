@@ -215,7 +215,11 @@ class JudgeScores:
             """Find correct total score column recursively."""
             try:
                 # convert so can hold NA
-                return score_rows.iloc[:, col].astype('float')
+                res = score_rows.iloc[:, col].astype('float')
+                if not res.isnull().all():
+                    return res
+                else:
+                    return find_scores(col - 1)
             except IndexError:
                 return find_scores(col - 1)
             except ValueError:
