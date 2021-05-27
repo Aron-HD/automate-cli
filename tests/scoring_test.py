@@ -1,5 +1,5 @@
 import pytest
-from automate.service import scoring
+from automate.service.scoring import CollateScores, JudgeScores, CreateAsset
 
 
 @pytest.fixture
