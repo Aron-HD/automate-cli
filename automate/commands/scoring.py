@@ -6,7 +6,7 @@ from automate.service.scoring import Collate, Scoresheet
 class Context:
     """docstring for Context"""
     DEFAULT_INFILE = r'D:\2021 Awards\2021 2. MENA Prize\MENA 2021 EDIT.xlsx'
-    DEFAULT_SCORESHEETS = r'T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2020 Awards\2. MENA Prize\Returned scoresheets'
+    DEFAULT_SCORESHEETS = r'T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets'
     DEFAULT_FILEPATH = r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize'
     DEFAULT_MARKS = 'Consolidated_marks.csv'
     DEFAULT_CREATE = 'marks'
@@ -90,10 +90,10 @@ def create(ctx, infile, path, outfile, award, create_type):
 
 @cli.command()
 @click.option(
-    "-i", "--infile",
+    "-o", "--output_file",
     required=True,
     show_default=True,
-    default=Context.DEFAULT_COLLATED,  # remove later
+    default='_Consolidated marks',
     type=click.Path(
         exists=True, file_okay=True, dir_okay=False,
         readable=True, resolve_path=True
@@ -112,12 +112,10 @@ def create(ctx, infile, path, outfile, award, create_type):
     help="The root directory where you want to create the marks folder and spreadsheet.",
 )
 @click.pass_context
-def shortlist(ctx, infile, path):
-    """Collate shortlist scoresheets from directory into infile consolidated marks."""
+def shortlist(ctx, output_file, path):
+    """Collate shortlist scoresheets from directory into output consolidated marks."""
 
-    for file in path:
-        SS = Scoresheet()
-        scores = SS.read_scores()
-        judge = SS.get_judge()
-
-        # CS = Collate()
+    CS = CollateScores(path, output_file)
+    output = CS()
+    msg = f'Wrote: {output}'
+    click.echo(msg)
