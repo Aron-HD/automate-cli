@@ -40,10 +40,9 @@ class CollateScores:
         cols = JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
         merged_group = reduce(
             lambda left, right: pd.merge(
-                left, right,
+                left, right.drop(cols, axis=1),
                 left_index=True,
-                right_index=True,
-                on=cols
+                right_index=True
             ), group_frames
         )
 
