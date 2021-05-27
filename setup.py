@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 def read_requirements():
-    # remember to pip freeze cat > requirements.txt
+    # remember to pipenv lock -r > requirements.txt
     with open('requirements.txt') as req:
         content = req.read().split('\n')
 
@@ -14,7 +14,7 @@ setup(
         version='0.1',
         packages=find_packages(),
         include_package_data=True,
-        # install_requires=read_requirements(),
+        install_requires=read_requirements(),
         entry_points='''
 		[console_scripts]
 		automate=automate.cli:cli
