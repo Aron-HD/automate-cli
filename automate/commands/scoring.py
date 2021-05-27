@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import click
-from automate.service.scoring import Collate, Scoresheet
+from automate.service.scoring import CollateScores
 
 
 class Context:
