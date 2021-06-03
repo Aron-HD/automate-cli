@@ -173,8 +173,9 @@ class IndexedMetadata(RawMetadata):
         'Industry sector'
     ]
 
-    def __init__(self, data, file):
+    def __init__(self, data, file, destination):
         super().__init__(data, file)
+        self.destination = destination
         self.categories = data['Category'].unique()
         self.data = data.fillna('')
         self.data['Location/Region'] = self.data['Market']
@@ -184,11 +185,10 @@ class IndexedMetadata(RawMetadata):
             ignore_index=True
         )
         additional_cols = ['Tier', 'Special Award', 'Award']
-        # additional_cols.reverse()
         self.winner_cols = IndexedMetadata.keep_cols.copy()
         [self.winner_cols.insert(0, x) for x in additional_cols]
 
-    def prep_shortlists(self, dfs):
+    def prep_shortlist(self, dfs):
         dfs.sort_values(by='WarcID', inplace=True, ignore_index=True)
         return dfs[IndexedMetadata.keep_cols]
 
@@ -204,11 +204,24 @@ class IndexedMetadata(RawMetadata):
         # drop tier as only used for sorting
         return dfwo.drop('Tier', axis=1)
 
-    def __call__(self):
+    def __call__(self, shortlist, csv):
 
         for cat in self.categories:
             df = self.data.query(f'Category=="{cat}"')
-            cat_winners = self.prep_winners(df)
+
+            if csv:
+                if shortlist:
+                    pass
+                elif not shortlist:
+                    pass
+            elif not csv:
+                if shortlist:
+                    cat_winners = self.prep_shortlist(df)
+                    fnm = f'{cat} shortlist.xlsx'
+                elif not shortlist:
+                    cat_winners = self.prep_winners(df)
+                    fnm = f'{cat} winners.xlsx'
+                # self.write_winners(cat_winners, fnm)
             break
 
 
@@ -216,6 +229,8 @@ if __name__ == '__main__':
 
     DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
     data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
-
-    IM = IndexedMetadata(data, DEFAULT_INFILE)
-    IM()
+    s = True
+    c = False
+    d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
+    IM = IndexedMetadata(data, DEFAULT_INFILE, d)
+    IM(s, c)
