@@ -11,6 +11,11 @@ echo = click.echo
 
 
 class RawMetadata:
+    """
+    Produces spreadsheets for indexing team from registration data
+    and also metadata for article upload sheet used for batch creation of CMS articles.
+    """
+
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
         self.file = file
@@ -47,8 +52,7 @@ class RawMetadata:
 
             df3 = df2[keep2]
 
-            # print(df3.columns)
-            # metadata file name / add in category or shortlist etc
+            # ToDo: metadata file name / add in category or shortlist etc
             edit = self.file
             index = edit.parent / edit.name.replace('EDIT', 'Metadata')
             echo('Wrote: ' + str(index))
@@ -62,7 +66,6 @@ class RawMetadata:
     def index_wafe(self):
         """Writes WAFE specific columns needed for indexing spreadsheet."""
         try:
-
             keepcols = [
                 'Entry Type',
                 'TBEntryId',
@@ -86,20 +89,18 @@ class RawMetadata:
             edit_xl = self.file
             index_xl = edit_xl.parent / \
                 edit_xl.name.replace('EDIT', 'metadata')
-            # open writer
+            # ToDo: switch to openpyxl
             with pd.ExcelWriter(index_xl, engine='xlsxwriter') as writer:
 
                 wafe_df = self.data
-                # echo(wafe_df.columns.array)
                 index_sheet = wafe_df[keepcols]
 
                 # sort categories
                 categories = sorted(list(index_sheet['Entry Type'].unique()))
 
                 for i in categories:
-                    # echo(i)
+
                     cat_sheet = index_sheet[index_sheet['Entry Type'] == i]
-                    # echo(cat_sheet.shape)
                     cat_sheet.to_excel(writer, index=False, sheet_name=i)
                     echo('\tWrote sheet: ' + i)
 
@@ -107,7 +108,6 @@ class RawMetadata:
                 for sheet in writer.sheets:
                     writer.sheets[sheet].set_column('A:R', 20)
 
-                # writer.save()
             echo(str(index_xl.name))
 
         except KeyError as e:
@@ -115,15 +115,12 @@ class RawMetadata:
             echo(e)
             return None
 
-    # Codes for input options and Article Source
-
     def upload(self, publication_date, code):
         """Generates article upload spreadsheet details."""
 
         df = self.data
         df3 = df[['Award Reference']]
 
-        # Authors
         author_fields = [('Author First Name (1)', 'Author Last Name (1)'),
                          ('Author First Name (2)', 'Author Last Name (2)'),
                          ('Author First Name (3)', 'Author Last Name (3)')]
@@ -152,8 +149,6 @@ class RawMetadata:
         df4 = df3[['Award Reference', 'Publication code', 'Issue', 'Pub Date',
                    'Title', 'Authors', 'DOI', 'PageFrom', 'PageTo', 'Notes', 'Content Type']]
 
-        echo(df4.shape)
-
         edit = self.file
         index = edit.parent / 'Upload.xlsx'
         echo('Wrote: ' + str(index))
@@ -161,7 +156,10 @@ class RawMetadata:
 
 
 class IndexedMetadata(RawMetadata):
-    """docstring for IndexedMetadata"""
+    """
+    Produces reports for awards press announcements / internal circulation, 
+    as well as csv sheets for winners / shortlists that are used by landing page generator.
+    """
     keep_cols = [
         'Article Title',
         'Brand',
@@ -222,9 +220,9 @@ class IndexedMetadata(RawMetadata):
                 if cell.value:
                     dims[cell.column_letter] = max(
                         (dims.get(cell.column_letter, 0), len(str(cell.value))))
-                # dims.get(cell.column_letter, 0)
-                cell.fill = PatternFill("solid", fgColor="FFFFFF")
+                # format fill and border while looping through cells
                 thin = Side(border_style="thin", color="000000")
+                cell.fill = PatternFill("solid", fgColor="FFFFFF")
                 cell.border = Border(top=thin, left=thin,
                                      right=thin, bottom=thin)
 
@@ -263,7 +261,6 @@ class IndexedMetadata(RawMetadata):
                     fnm += f' winners'
                 output = self.write_excel(cat_winners, fnm)
             echo('\t wrote: ' + click.style(output, fg='green'))
-            # break
 
 
 if __name__ == '__main__':
