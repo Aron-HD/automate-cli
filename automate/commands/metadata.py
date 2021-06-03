@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-from automate.service.metadata import Metadata
+from automate.service.metadata import RawMetadata
+from automate.service.metadata import IndexedMetadata
 
 import click
 import pandas as pd
@@ -24,7 +25,8 @@ class Context:
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
         self.file = file
-        self.metadata = Metadata(data, file)
+        self.raw_metadata = RawMetadata(data, file)
+        self.indexed_metadata = IndexedMetadata(data, file)
 
 
 def read_spreadsheet(excel_file, excel_sheet):
@@ -73,7 +75,7 @@ def cli(ctx, infile, sheet):
 def index(ctx):
     """Writes only columns needed for indexing spreadsheet and collates agency details."""
 
-    M = ctx.obj.metadata
+    M = ctx.obj.raw_metadata
     M.index()
 
 
@@ -82,7 +84,7 @@ def index(ctx):
 def index_wafe(ctx):
     """Writes WAFE specific columns needed for indexing spreadsheet."""
 
-    M = ctx.obj.metadata
+    M = ctx.obj.raw_metadata
     M.index_wafe()
 
 
@@ -107,5 +109,5 @@ def index_wafe(ctx):
 def upload(ctx, publication_date, code):
     """Generates article upload spreadsheet details."""
     publication_code = Context.CODES[code]
-    M = ctx.obj.metadata
+    M = ctx.obj.raw_metadata
     M.upload(publication_date, publication_code)

@@ -9,7 +9,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 echo = click.echo
 
 
-class Metadata:
+class RawMetadata:
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
         self.file = file
@@ -156,3 +156,10 @@ class Metadata:
         index = edit.parent / 'Upload.xlsx'
         echo('Wrote: ' + str(index))
         return df4.to_excel(index, index=False)
+
+
+class IndexedMetadata(RawMetadata):
+    """docstring for IndexedMetadata"""
+
+    def __init__(self, data, file):
+        super().__init__(data, file)
