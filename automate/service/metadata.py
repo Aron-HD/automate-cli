@@ -13,6 +13,7 @@ class RawMetadata:
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
         self.file = file
+        self.year = date.today().strftime("%Y")
 
     def index(self):
         """Writes only columns needed for indexing spreadsheet and collates agency details."""
@@ -141,7 +142,7 @@ class RawMetadata:
         df3['Title'] = df[['Brand',
                            'Award Title']].apply(lambda x: ': '.join(x[x.notnull()]), axis=1)
         df3['Publication code'] = code
-        df3['Issue'] = date.today().strftime("%Y")
+        df3['Issue'] = self.year
         df3['Pub Date'] = publication_date.strftime("%d-%m-%Y")
         df3[['DOI', 'PageFrom', 'PageTo', 'Notes']] = None
         df3['Content Type'] = 'Case Study'
@@ -184,13 +185,15 @@ class IndexedMetadata(RawMetadata):
             inplace=True,
             ignore_index=True
         )
+        self.cols = ['Market' if y ==
+                     'Location/Region' else y for y in IndexedMetadata.keep_cols]
+        self.winner_cols = self.cols.copy()
         additional_cols = ['Tier', 'Special Award', 'Award']
-        self.winner_cols = IndexedMetadata.keep_cols.copy()
         [self.winner_cols.insert(0, x) for x in additional_cols]
 
     def prep_shortlist(self, dfs):
         dfs.sort_values(by='WarcID', inplace=True, ignore_index=True)
-        return dfs[IndexedMetadata.keep_cols]
+        return dfs[self.cols]
 
     def prep_winners(self, dfw):
         dfw.sort_values(
@@ -200,15 +203,32 @@ class IndexedMetadata(RawMetadata):
             ignore_index=True
         )
         dfw1 = dfw[self.winner_cols]
-        dfwo = dfw1.query('`Special Award`!="" or Award!="Shortlisted"')
+        # concat special awards where not blank using mask
+        mask = dfw1['Special Award'] == ''
+        dfw1['Award'] = dfw1['Award'].where(
+            mask, dfw1[['Award', 'Special Award']].agg(' + '.join, axis=1)
+        )
+        dfwo = dfw1.query('"+" in Award or Award!="Shortlisted"')
         # drop tier as only used for sorting
-        return dfwo.drop('Tier', axis=1)
+        return dfwo.drop(['Tier', 'Special Award'], axis=1)
+
+    def write_excel(self, frame, filename):
+        try:
+            fn = self.destination / Path(f'{filename}-{self.year}').with_suffix('.xlsx')
+            with pd.ExcelWriter(fn) as writer:
+                frame.to_excel(writer, index=False)
+
+                # ToDo: format sheet
+
+            return fn.name
+        except Exception as e:
+            raise e
 
     def __call__(self, shortlist, csv):
 
         for cat in self.categories:
             df = self.data.query(f'Category=="{cat}"')
-
+            fnm = cat.replace(' ', '-').lower()
             if csv:
                 if shortlist:
                     pass
@@ -217,11 +237,12 @@ class IndexedMetadata(RawMetadata):
             elif not csv:
                 if shortlist:
                     cat_winners = self.prep_shortlist(df)
-                    fnm = f'{cat} shortlist.xlsx'
+                    fnm += f'-shortlist'
                 elif not shortlist:
                     cat_winners = self.prep_winners(df)
-                    fnm = f'{cat} winners.xlsx'
-                # self.write_winners(cat_winners, fnm)
+                    fnm += f'-winners'
+                output = self.write_excel(cat_winners, fnm)
+            echo('\t wrote: ' + click.style(output, fg='green'))
             break
 
 
@@ -229,7 +250,7 @@ if __name__ == '__main__':
 
     DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
     data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
-    s = True
+    s = False
     c = False
     d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
     IM = IndexedMetadata(data, DEFAULT_INFILE, d)
