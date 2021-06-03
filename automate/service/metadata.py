@@ -160,6 +160,62 @@ class RawMetadata:
 
 class IndexedMetadata(RawMetadata):
     """docstring for IndexedMetadata"""
+    keep_cols = [
+        'Article Title',
+        'Brand',
+        'Advertiser',
+        'Entrant Company',
+        'Entrant Country',
+        'Location/Region',
+        'Idea creation',
+        'Media',
+        'PR',
+        'Industry sector'
+    ]
 
     def __init__(self, data, file):
         super().__init__(data, file)
+        self.categories = data['Category'].unique()
+        self.data = data.fillna('')
+        self.data['Location/Region'] = self.data['Market']
+        self.data.sort_values(
+            by='Category',
+            inplace=True,
+            ignore_index=True
+        )
+        additional_cols = ['Tier', 'Special Award', 'Award']
+        # additional_cols.reverse()
+        self.winner_cols = IndexedMetadata.keep_cols.copy()
+        [self.winner_cols.insert(0, x) for x in additional_cols]
+
+    def prep_shortlists(self, dfs):
+        dfs.sort_values(by='WarcID', inplace=True, ignore_index=True)
+        return dfs[IndexedMetadata.keep_cols]
+
+    def prep_winners(self, dfw):
+        dfw.sort_values(
+            by='Tier',
+            ascending=False,
+            inplace=True,
+            ignore_index=True
+        )
+        dfw1 = dfw[self.winner_cols]
+        dfwo = dfw1.query('`Special Award`!="" or Award!="Shortlisted"')
+        # drop tier as only used for sorting
+        return dfwo.drop('Tier', axis=1)
+
+    def __call__(self):
+
+        for cat in self.categories:
+            df = self.data.query(f'Category=="{cat}"')
+            cat_winners = self.prep_winners(df)
+            break
+
+
+if __name__ == '__main__':
+
+    DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
+    data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
+
+    IM = IndexedMetadata(data, DEFAULT_INFILE)
+    IM()
