@@ -238,9 +238,6 @@ class IndexedMetadata(RawMetadata):
                 frame.to_excel(writer, sheet_name=filename, index=False)
                 worksheet = writer.sheets[filename]
                 self.format_excel(worksheet)
-
-                # ToDo: format sheet
-
             return fn.name
         except Exception as e:
             raise e
@@ -255,6 +252,7 @@ class IndexedMetadata(RawMetadata):
                     fnm += f'-shortlist'
                 elif not shortlist:
                     fnm += f'-winners'
+                output = self.write_csv()
             elif not csv:
                 fnm = cat
                 if shortlist:
@@ -272,8 +270,8 @@ if __name__ == '__main__':
 
     DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
     data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
-    s = False
-    c = False
+    s = True
+    c = True
     d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
     IM = IndexedMetadata(data, DEFAULT_INFILE, d)
     IM(s, c)
