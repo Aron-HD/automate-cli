@@ -4,6 +4,7 @@ import click
 import pandas as pd
 from pathlib import Path
 from datetime import date
+from openpyxl.styles import PatternFill, Border, Side, colors
 
 pd.options.mode.chained_assignment = None  # default='warn'
 echo = click.echo
@@ -166,11 +167,11 @@ class IndexedMetadata(RawMetadata):
         'Brand',
         'Advertiser',
         'Entrant Company',
-        'Entrant Country',
-        'Location/Region',
         'Idea creation',
         'Media',
         'PR',
+        'Entrant Country',
+        'Location/Region',
         'Industry sector'
     ]
 
@@ -212,11 +213,31 @@ class IndexedMetadata(RawMetadata):
         # drop tier as only used for sorting
         return dfwo.drop(['Tier', 'Special Award'], axis=1)
 
+    @staticmethod
+    def format_excel(ws):
+        # format the column widths dynamically
+        dims = {}
+        for row in ws.rows:
+            for cell in row:
+                if cell.value:
+                    dims[cell.column_letter] = max(
+                        (dims.get(cell.column_letter, 0), len(str(cell.value))))
+                # dims.get(cell.column_letter, 0)
+                cell.fill = PatternFill("solid", fgColor="FFFFFF")
+                thin = Side(border_style="thin", color="000000")
+                cell.border = Border(top=thin, left=thin,
+                                     right=thin, bottom=thin)
+
+        for col, value in dims.items():
+            ws.column_dimensions[col].width = value
+
     def write_excel(self, frame, filename):
         try:
-            fn = self.destination / Path(f'{filename}-{self.year}').with_suffix('.xlsx')
-            with pd.ExcelWriter(fn) as writer:
-                frame.to_excel(writer, index=False)
+            fn = self.destination / Path(f'WAFE {filename} - {self.year}').with_suffix('.xlsx')
+            with pd.ExcelWriter(fn, engine='openpyxl') as writer:
+                frame.to_excel(writer, sheet_name=filename, index=False)
+                worksheet = writer.sheets[filename]
+                self.format_excel(worksheet)
 
                 # ToDo: format sheet
 
@@ -228,22 +249,23 @@ class IndexedMetadata(RawMetadata):
 
         for cat in self.categories:
             df = self.data.query(f'Category=="{cat}"')
-            fnm = cat.replace(' ', '-').lower()
             if csv:
+                fnm = cat.replace(' ', '-').lower()
                 if shortlist:
-                    pass
-                elif not shortlist:
-                    pass
-            elif not csv:
-                if shortlist:
-                    cat_winners = self.prep_shortlist(df)
                     fnm += f'-shortlist'
                 elif not shortlist:
-                    cat_winners = self.prep_winners(df)
                     fnm += f'-winners'
+            elif not csv:
+                fnm = cat
+                if shortlist:
+                    cat_winners = self.prep_shortlist(df)
+                    fnm += f' shortlist'
+                elif not shortlist:
+                    cat_winners = self.prep_winners(df)
+                    fnm += f' winners'
                 output = self.write_excel(cat_winners, fnm)
             echo('\t wrote: ' + click.style(output, fg='green'))
-            break
+            # break
 
 
 if __name__ == '__main__':
