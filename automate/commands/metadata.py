@@ -26,7 +26,6 @@ class Context:
         self.data = data
         self.file = file
         self.raw_metadata = RawMetadata(data, file)
-        self.indexed_metadata = IndexedMetadata(data, file)
 
 
 def read_spreadsheet(excel_file, excel_sheet):
@@ -111,3 +110,35 @@ def upload(ctx, publication_date, code):
     publication_code = Context.CODES[code]
     M = ctx.obj.raw_metadata
     M.upload(publication_date, publication_code)
+
+
+@ cli.command()
+@ click.option(
+    "-s/-w",
+    "--shortlist/--winners",
+    required=True,
+    help="Choose between shortlist or winners spreadsheets.",
+)
+@ click.option(
+    "-c/-p",
+    "--csv/--press",
+    required=True,
+    help="Choose to csvs for landing pages or excel spreadsheets for press.",
+)
+@ click.option(
+    "-d", "-o", "--destination"
+    required=True,
+    type=click.Path(
+        exists=True,
+        file_okay=False,
+        dir_okay=True,
+        resolve_path=True
+    ),
+    help="Specify the destination for output. Must be a folder.",
+)
+@ click.pass_context
+def winners(ctx, shortlist, csv, destination):
+    """Writes specific metadata for circulating winners / shortlisted spreadsheets."""
+
+    M = IndexedMetadata(ctx.obj.data, ctx.obj.file, destination)
+    M(shortlist, csv)
