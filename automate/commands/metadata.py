@@ -126,7 +126,7 @@ def upload(ctx, publication_date, code):
     help="Choose to csvs for landing pages or excel spreadsheets for press.",
 )
 @ click.option(
-    "-d", "-o", "--destination"
+    "-d", "-o", "--destination",
     required=True,
     type=click.Path(
         exists=True,
