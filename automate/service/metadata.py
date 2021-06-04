@@ -240,6 +240,14 @@ class IndexedMetadata(RawMetadata):
         except Exception as e:
             raise e
 
+    def write_csv(self, frame, filename):
+        try:
+            fn = self.destination / Path(filename).with_suffix('.csv')
+            frame.to_csv(fn, index=False, encoding='utf-8')
+            return fn.name
+        except Exception as e:
+            raise e
+
     def __call__(self, shortlist, csv):
 
         for cat in self.categories:
@@ -247,10 +255,12 @@ class IndexedMetadata(RawMetadata):
             if csv:
                 fnm = cat.replace(' ', '-').lower()
                 if shortlist:
+                    cat_winners = self.prep_csv_shortlist(df)
                     fnm += f'-shortlist'
                 elif not shortlist:
+                    cat_winners = self.prep_csv_winners(df)
                     fnm += f'-winners'
-                output = self.write_csv()
+                output = self.write_csv(cat_winners)
             elif not csv:
                 fnm = cat
                 if shortlist:
