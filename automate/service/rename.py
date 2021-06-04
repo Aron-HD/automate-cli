@@ -44,9 +44,9 @@ class WafeFilenames:
         fn = f.name
         stem = f.stem
         id_parts = self.analyse_parts(stem.split('_'))
-        new_id = id_parts[0]
 
-        if new_id is not None:
+        if id_parts is not None:
+            new_id = id_parts[0]
             self.old_filenames.append(fn)
             # assetid, type and extensions
             asset = {id_parts[1]: {'type': id_parts[2], 'ext': f.suffix}}
@@ -70,7 +70,6 @@ class WafeFilenames:
 
         for id_key in split_filenames_data:
             # make this scalable to different vals
-            # campaign_vids = 0
 
             in_ids = split_filenames_data[id_key]
 
@@ -159,6 +158,7 @@ class WafeFilenames:
 
 class RenameFile:
     """Rename a file or directory of files according to a column in the excel sheet."""
+
     def __init__(self, path, ids, award):
         self.path = Path(path)
         self.ids = ids
