@@ -160,56 +160,87 @@ class IndexedMetadata(RawMetadata):
     Produces reports for awards press announcements / internal circulation, 
     as well as csv sheets for winners / shortlists that are used by landing page generator.
     """
-    keep_cols = [
-        'Article Title',
-        'Brand',
-        'Advertiser',
-        'Entrant Company',
-        'Idea creation',
-        'Media',
-        'PR',
-        'Entrant Country',
-        'Location/Region',
-        'Industry sector'
-    ]
+    cols = {
+        'WarcID': 'ID',
+        'Article Title': 'Title',
+        'Brand': 'Brand',
+        'Advertiser': 'Parent',
+        'Entrant Company': 'Entrant',
+        'Idea creation': 'Idea',
+        'Media': 'Media',
+        'PR': 'PR',
+        'Entrant Country': 'Country',
+        'Location/Region': 'Market',
+        'Industry sector': 'Sector',
+    }
 
     def __init__(self, data, file, destination):
         super().__init__(data, file)
         self.destination = destination
         self.categories = data['Category'].unique()
         self.data = data.fillna('')
-        self.data['Location/Region'] = self.data['Market']
         self.data.sort_values(
             by='Category',
             inplace=True,
             ignore_index=True
         )
-        self.cols = ['Market' if y ==
-                     'Location/Region' else y for y in IndexedMetadata.keep_cols]
-        self.winner_cols = self.cols.copy()
-        additional_cols = ['Tier', 'Special Award', 'Award']
-        [self.winner_cols.insert(0, x) for x in additional_cols]
+        self.meta_cols = list(IndexedMetadata.cols.keys())
+        self.csv_cols = list(IndexedMetadata.cols.values())
+        self.award_cols = ['Tier', 'Special Award', 'Award']
+        self.winner_cols = self.meta_cols.copy()
+        [self.winner_cols.insert(0, x) for x in self.award_cols]
+        self.ID = 'WarcID'
 
-    def prep_shortlist(self, dfs):
-        dfs.sort_values(by='WarcID', inplace=True, ignore_index=True)
-        return dfs[self.cols]
+    @staticmethod
+    def rename_cols(dframe):
+        # ToDo: move this to prep_csv()
+        dframe.rename(columns=IndexedMetadata.cols, inplace=True)
 
-    def prep_winners(self, dfw):
+    def prep_csv(self, dfc, shortlist):
+        self.rename_cols(dfc)
+        dropcols = ['Country', 'Sector', 'Idea', 'Media', 'PR']
+
+        dfc2 = dfc[self.csv_cols] if shortlist else dfc[self.award_cols + self.csv_cols]
+
+        # link_url =
+        dfc2['Link'] = '/content/article/Warc-Awards-Effectiveness/_/'
+        dfc2['Link'] = dfc2['Link'].astype(str) + dfc2['ID'].astype(str)
+        return dfc2.drop(dropcols, axis=1)
+
+    def prep_shortlist(self, dfs, csv_true: bool):
+        # ToDo: switch to prep_csv()
+        dfs.sort_values(by=self.ID, inplace=True, ignore_index=True)
+        dfs1 = dfs[self.meta_cols]
+        return self.prep_csv(dfs1, True) if csv_true else dfs1
+
+    def prep_winners(self, dfw, csv_true: bool):
+        # ToDo: switch to prep_excel()
         dfw.sort_values(
             by='Tier',
             ascending=False,
             inplace=True,
             ignore_index=True
         )
+
         dfw1 = dfw[self.winner_cols]
-        # concat special awards where not blank using mask
+        # drop Special Award, Tier
+        dropcols = self.award_cols.copy()
+        # dont drop Award
+        dropcols.remove('Award')
+        if csv_true:
+            self.rename_cols(dfw1)
+            dfw1 = self.prep_csv(dfw1, False)
+        else:
+            dropcols += [self.ID]  # drop WarcID
+        # concat special awards masking blank cells
         mask = dfw1['Special Award'] == ''
         dfw1['Award'] = dfw1['Award'].where(
             mask, dfw1[['Award', 'Special Award']].agg(' + '.join, axis=1)
         )
-        dfwo = dfw1.query('"+" in Award or Award!="Shortlisted"')
-        # drop tier as only used for sorting
-        return dfwo.drop(['Tier', 'Special Award'], axis=1)
+        # drop shortlisted entries that didn't win special award (a + sa)
+        dfwo = dfw1 if csv_true else dfw1.query(
+            '"+" in Award or Award!="Shortlisted"')
+        return dfwo.drop(dropcols, axis=1)
 
     @staticmethod
     def format_excel(ws):
@@ -229,7 +260,7 @@ class IndexedMetadata(RawMetadata):
         for col, value in dims.items():
             ws.column_dimensions[col].width = value
 
-    def write_excel(self, frame, filename):
+    def write_excel(self, frame, filename: str):
         try:
             fn = self.destination / Path(f'WAFE {filename} - {self.year}').with_suffix('.xlsx')
             with pd.ExcelWriter(fn, engine='openpyxl') as writer:
@@ -240,7 +271,7 @@ class IndexedMetadata(RawMetadata):
         except Exception as e:
             raise e
 
-    def write_csv(self, frame, filename):
+    def write_csv(self, frame, filename: str):
         try:
             fn = self.destination / Path(filename).with_suffix('.csv')
             frame.to_csv(fn, index=False, encoding='utf-8')
@@ -248,37 +279,57 @@ class IndexedMetadata(RawMetadata):
         except Exception as e:
             raise e
 
-    def __call__(self, shortlist, csv):
+    @staticmethod
+    def split_category_name(name):
+        outliers = ['Business', 'Culture', 'Partnerships', 'Channel']
+        if not any(i in name for i in outliers):
+            c = name.split()
+        else:
+            for i in outliers:
+                if i in name:
+                    return i
+        if len(c) > 1:
+            return c[1]
+        return c[0]
+
+    def __call__(self, shortlist: bool, csv: bool):
 
         for cat in self.categories:
             df = self.data.query(f'Category=="{cat}"')
+
             if csv:
-                fnm = cat.replace(' ', '-').lower()
-                if shortlist:
-                    cat_winners = self.prep_csv_shortlist(df)
-                    fnm += f'-shortlist'
-                elif not shortlist:
-                    cat_winners = self.prep_csv_winners(df)
-                    fnm += f'-winners'
-                output = self.write_csv(cat_winners)
-            elif not csv:
-                fnm = cat
-                if shortlist:
-                    cat_winners = self.prep_shortlist(df)
-                    fnm += f' shortlist'
-                elif not shortlist:
-                    cat_winners = self.prep_winners(df)
-                    fnm += f' winners'
-                output = self.write_excel(cat_winners, fnm)
-            echo('\t wrote: ' + click.style(output, fg='green'))
+                cat = self.split_category_name(cat)
+
+            if shortlist:
+                win_type = 'shortlist'
+                cat_winners = self.prep_shortlist(df, csv)
+            else:
+                win_type = 'winners'
+                cat_winners = self.prep_winners(df, csv)
+
+            fnm = ' '.join([cat, win_type])
+
+            if csv:
+                alt_fnm = fnm.replace(' ', '_').lower()
+                output_name = self.write_csv(cat_winners, alt_fnm)
+            else:
+                cat_winners['Location/Region'] = cat_winners['Market']
+                output_name = self.write_excel(cat_winners, fnm)
+
+            echo('\t wrote: ' + click.style(output_name, fg='green'))
 
 
 if __name__ == '__main__':
 
     DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
     data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
-    s = True
+    s = False
     c = True
-    d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
+    #d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
+    # if s:
+    # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
+    # else:
+    # winners
+    d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv'
     IM = IndexedMetadata(data, DEFAULT_INFILE, d)
     IM(s, c)
