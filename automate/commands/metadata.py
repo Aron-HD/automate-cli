@@ -126,6 +126,13 @@ def upload(ctx, publication_date, code):
     help="Choose to csvs for landing pages or excel spreadsheets for press.",
 )
 @ click.option(
+    "-a",
+    "--award",
+    required=True,
+    type=click.Choice(Context.CODES.keys(), case_sensitive=False),
+    help="Award scheme:\n\n"+f"{list(Context.CODES.keys())}",
+)
+@ click.option(
     "-d", "-o", "--destination",
     required=True,
     type=click.Path(
@@ -137,7 +144,7 @@ def upload(ctx, publication_date, code):
     help="Specify the destination for output. Must be a folder.",
 )
 @ click.pass_context
-def winners(ctx, shortlist, csv, destination):
+def winners(ctx, shortlist, csv, award, destination):
     """Writes specific metadata for circulating winners / shortlisted spreadsheets."""
 
     M = IndexedMetadata(ctx.obj.data, ctx.obj.file, destination)
