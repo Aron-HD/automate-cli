@@ -313,7 +313,7 @@ class IndexedMetadata(RawMetadata):
                 alt_fnm = fnm.replace(' ', '_').lower()
                 output_name = self.write_csv(cat_winners, alt_fnm)
             else:
-                cat_winners['Location/Region'] = cat_winners['Market']
+                # cat_winners['Location/Region'] = cat_winners['Market']
                 output_name = self.write_excel(cat_winners, fnm)
 
             echo('\t wrote: ' + click.style(output_name, fg='green'))
@@ -325,11 +325,11 @@ if __name__ == '__main__':
     data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
     s = False
     c = True
-    #d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
-    # if s:
-    # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
-    # else:
-    # winners
-    d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv'
+    # d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
+    if s:
+        d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
+    else:
+        # winners
+        d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv'
     IM = IndexedMetadata(data, DEFAULT_INFILE, d)
     IM(s, c)
