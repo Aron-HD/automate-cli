@@ -5,6 +5,7 @@ import pandas as pd
 from pathlib import Path
 from datetime import date
 from openpyxl.styles import PatternFill, Border, Side, colors
+from pandas.core.computation.ops import UndefinedVariableError
 
 pd.options.mode.chained_assignment = None  # default='warn'
 echo = click.echo
@@ -161,6 +162,16 @@ class IndexedMetadata(RawMetadata):
     as well as csv sheets for winners / shortlists that are used by landing page generator.
     """
     cols = {
+        'ID': 'ID',
+        'Award Title': 'Title',
+        'Brand': 'Brand',
+        'Brand owner': 'Parent',
+        'Lead agencies': 'Lead',
+        'Contributing agencies': 'Contributing',
+        'Countries': 'Market',
+        'Industry sector': 'Sector',
+    }
+    alt_cols = {
         'WarcID': 'ID',
         'Article Title': 'Title',
         'Brand': 'Brand',
@@ -174,27 +185,34 @@ class IndexedMetadata(RawMetadata):
         'Industry sector': 'Sector',
     }
 
-    def __init__(self, data, file, destination):
+    def __init__(self, data, file, award, destination):
         super().__init__(data, file)
         self.destination = destination
-        self.categories = data['Category'].unique()
         self.data = data.fillna('')
-        self.data.sort_values(
-            by='Category',
-            inplace=True,
-            ignore_index=True
-        )
-        self.meta_cols = list(IndexedMetadata.cols.keys())
-        self.csv_cols = list(IndexedMetadata.cols.values())
+        # setup dependent on prize / award having categories
+        try:
+            self.data.sort_values(
+                by='Category',
+                inplace=True,
+                ignore_index=True
+            )
+            self.categories = data['Category'].unique()
+            self.cols = IndexedMetadata.alt_cols
+            self.ID = 'WarcID'
+        except KeyError as e:
+            print(e)  # log
+            self.categories = [award]
+            self.cols = IndexedMetadata.cols
+            self.ID = 'ID'
+        self.meta_cols = list(self.cols.keys())
+        self.csv_cols = list(self.cols.values())
         self.award_cols = ['Tier', 'Special Award', 'Award']
         self.winner_cols = self.meta_cols.copy()
         [self.winner_cols.insert(0, x) for x in self.award_cols]
-        self.ID = 'WarcID'
 
-    @staticmethod
-    def rename_cols(dframe):
+    def rename_cols(self, dframe):
         # ToDo: move this to prep_csv()
-        dframe.rename(columns=IndexedMetadata.cols, inplace=True)
+        dframe.rename(columns=self.cols, inplace=True)
 
     def prep_csv(self, dfc, shortlist):
         self.rename_cols(dfc)
@@ -205,7 +223,12 @@ class IndexedMetadata(RawMetadata):
         # link_url =
         dfc2['Link'] = '/content/article/Warc-Awards-Effectiveness/_/'
         dfc2['Link'] = dfc2['Link'].astype(str) + dfc2['ID'].astype(str)
-        return dfc2.drop(dropcols, axis=1)
+        for col in dropcols:
+            try:
+                dfc2.drop([col], axis=1)
+            except KeyError:
+                pass
+        return dfc2
 
     def prep_shortlist(self, dfs, csv_true: bool):
         # ToDo: switch to prep_csv()
@@ -262,7 +285,7 @@ class IndexedMetadata(RawMetadata):
 
     def write_excel(self, frame, filename: str):
         try:
-            fn = self.destination / Path(f'WAFE {filename} - {self.year}').with_suffix('.xlsx')
+            fn = self.destination / Path(f'WARC {filename} - {self.year}').with_suffix('.xlsx')
             with pd.ExcelWriter(fn, engine='openpyxl') as writer:
                 frame.to_excel(writer, sheet_name=filename, index=False)
                 worksheet = writer.sheets[filename]
@@ -295,8 +318,10 @@ class IndexedMetadata(RawMetadata):
     def __call__(self, shortlist: bool, csv: bool):
 
         for cat in self.categories:
-            df = self.data.query(f'Category=="{cat}"')
-
+            try:
+                df = self.data.query(f'Category=="{cat}"')
+            except UndefinedVariableError:
+                df = self.data
             if csv:
                 cat = self.split_category_name(cat)
 
@@ -311,25 +336,29 @@ class IndexedMetadata(RawMetadata):
 
             if csv:
                 alt_fnm = fnm.replace(' ', '_').lower()
-                output_name = self.write_csv(cat_winners, alt_fnm)
+                output_name = self.write_csv(
+                    frame=cat_winners, filename=alt_fnm)
             else:
                 # cat_winners['Location/Region'] = cat_winners['Market']
-                output_name = self.write_excel(cat_winners, fnm)
+                output_name = self.write_excel(frame=cat_winners, filename=fnm)
 
             echo('\t wrote: ' + click.style(output_name, fg='green'))
 
 
 if __name__ == '__main__':
 
-    DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
-    data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
+    # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
+    DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 MENA Prize\MENA 2021 EDIT.xlsx"
     s = False
-    c = True
-    # d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
+    c = False
+    a = 'MENA'
+    d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
     if s:
-        d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
+        # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
+        data = pd.read_excel(DEFAULT_INFILE, sheet_name='Shortlist')
     else:
         # winners
-        d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv'
-    IM = IndexedMetadata(data, DEFAULT_INFILE, d)
+        # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv'
+        data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
+    IM = IndexedMetadata(data, DEFAULT_INFILE, a, d)
     IM(s, c)
