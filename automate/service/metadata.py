@@ -210,12 +210,18 @@ class IndexedMetadata(RawMetadata):
         self.winner_cols = self.meta_cols.copy()
         [self.winner_cols.insert(0, x) for x in self.award_cols]
 
-    def rename_cols(self, dframe):
-        # ToDo: move this to prep_csv()
-        dframe.rename(columns=self.cols, inplace=True)
+    def rename_cols(self, dframe, csv: bool):
+        if csv:
+            cols_to_rename = self.cols
+        else:
+            required_fields = ['Article Title', 'Award Title',
+                               'Advertiser', 'Brand owner', 'Countries', 'Location/Region']
+            cols_to_rename = {k: v for k,
+                              v in self.cols.items() if k in required_fields}
+        dframe.rename(columns=cols_to_rename, inplace=True)
 
-    def prep_csv(self, dfc, shortlist):
-        self.rename_cols(dfc)
+    def prep_csv(self, dfc, shortlist: bool):
+        self.rename_cols(dfc, csv=True)
         dropcols = ['Country', 'Sector', 'Idea', 'Media', 'PR']
 
         dfc2 = dfc[self.csv_cols] if shortlist else dfc[self.award_cols + self.csv_cols]
@@ -250,8 +256,8 @@ class IndexedMetadata(RawMetadata):
         dropcols = self.award_cols.copy()
         # dont drop Award
         dropcols.remove('Award')
+        self.rename_cols(dfw1, csv_true)
         if csv_true:
-            self.rename_cols(dfw1)
             dfw1 = self.prep_csv(dfw1, False)
         else:
             dropcols += [self.ID]  # drop WarcID
@@ -349,12 +355,12 @@ if __name__ == '__main__':
 
     # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
     DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 MENA Prize\MENA 2021 EDIT.xlsx"
-    s = False
-    c = False
+    s = True
+    c = True
     a = 'MENA'
     d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
     if s:
-        # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
+        d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
         data = pd.read_excel(DEFAULT_INFILE, sheet_name='Shortlist')
     else:
         # winners
