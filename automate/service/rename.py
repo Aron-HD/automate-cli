@@ -45,7 +45,7 @@ class WafeFilenames:
         stem = f.stem
         id_parts = self.analyse_parts(stem.split('_'))
 
-        if id_parts is not None:
+        if id_parts is not None and len(id_parts) == 3:
             new_id = id_parts[0]
             self.old_filenames.append(fn)
             # assetid, type and extensions
