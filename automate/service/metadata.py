@@ -184,11 +184,18 @@ class IndexedMetadata(RawMetadata):
         'Location/Region': 'Market',
         'Industry sector': 'Sector',
     }
+    content_codes = {
+        'mena': 'WARC-PRIZE-MENA',
+        'effectiveness': 'WARC-AWARDS-EFFECTIVENESS',
+        'asia': 'WARC-AWARDS-ASIA',
+        'media': 'WARC-AWARDS-MEDIA',
+    }
 
     def __init__(self, data, file, award, destination):
         super().__init__(data, file)
         self.destination = destination
         self.data = data.fillna('')
+        self.award = award
         # setup dependent on prize / award having categories
         try:
             self.data.sort_values(
@@ -210,6 +217,12 @@ class IndexedMetadata(RawMetadata):
         self.winner_cols = self.meta_cols.copy()
         [self.winner_cols.insert(0, x) for x in self.award_cols]
 
+    @staticmethod
+    def get_award_code(awd) -> str:
+        award_name = awd.lower()
+        cc = IndexedMetadata.content_codes
+        return cc[award_name]
+
     def rename_cols(self, dframe, csv: bool):
         if csv:
             cols_to_rename = self.cols
@@ -226,8 +239,8 @@ class IndexedMetadata(RawMetadata):
 
         dfc2 = dfc[self.csv_cols] if shortlist else dfc[self.award_cols + self.csv_cols]
 
-        # link_url =
-        dfc2['Link'] = '/content/article/Warc-Awards-Effectiveness/_/'
+        content_code = self.get_award_code(self.award)
+        dfc2['Link'] = f'/content/article/{content_code}/_/'
         dfc2['Link'] = dfc2['Link'].astype(str) + dfc2['ID'].astype(str)
         for col in dropcols:
             try:
