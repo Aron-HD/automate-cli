@@ -8,3 +8,4 @@ sandbox.py
 .vscode
 .pytest_cache
 weather.py
+templates/
