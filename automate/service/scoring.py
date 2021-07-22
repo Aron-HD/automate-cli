@@ -358,31 +358,31 @@ class CreateAsset(object):
 
 if __name__ == '__main__':
 
-    infile = r'D:\2021 Awards\2021 2. MENA Prize\MENA 2021 EDIT.xlsx'
-    outfile = r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize\test.csv'
-    path = r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize'
-    DEFAULT_CREATE = 'marks'
-    award = 'mena'
+    infile = r'D:\2021 Awards\2021 3. Asia Awards\Asia 2021 EDIT.xlsx'
+    outfile = r'C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_scoring\test.csv'
+    path = r'C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_scoring'
+    DEFAULT_CREATE = 'scoresheets'
+    award = 'asia'
     sheetnum = 1
 
-    scoresheets_path = r"T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets"
+    # scoresheets_path = r"T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets"
     # scoresheets_path = r"C:\Users\arondavidson\Scripts\Test\2. MENA Prize\scoresheets"
 
-    CS = CollateScores(scoresheets_path, '_Consolidated marks')
-    CS()
+    # CS = CollateScores(scoresheets_path, '_Consolidated marks')
+    # CS()
     # CS.write_csv(outfile)
 
     # frame_output = pd.merge(*groups, how='outer', on=['ID', 'Ref', 'Paper'])
     # print(d.columns)
 
-    # create = CreateAsset(
-    #     path=path,
-    #     award=award,
-    #     outfile=outfile,
-    #     excel_file=infile,
-    #     create_type=DEFAULT_CREATE,
-    # )
+    create = CreateAsset(
+        path=path,
+        award=award,
+        outfile=outfile,
+        excel_file=infile,
+        create_type=DEFAULT_CREATE,
+    )
 
     # create.consolidated_marks(sheetnum)
-    # print(create.scoresheets(sheetnum))
+    print(create.scoresheets(sheetnum))
     # create.final_picks()
