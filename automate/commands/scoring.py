@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import click
 from automate.service.scoring import CollateScores
+from automate.service.scoring import CreateAsset
 
 
 class Context:
