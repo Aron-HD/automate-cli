@@ -56,7 +56,7 @@ def cli(ctx):
 )
 @click.option(
     '-o', '--outfile',
-    required=True,
+    required=False,
     show_default=True,
     default=Context.DEFAULT_MARKS,  # remove later
     type=click.Path(
