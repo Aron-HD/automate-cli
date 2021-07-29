@@ -367,13 +367,14 @@ class IndexedMetadata(RawMetadata):
 if __name__ == '__main__':
 
     # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
-    DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 MENA Prize\MENA 2021 EDIT.xlsx"
-    s = True
+    # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 MENA Prize\MENA 2021 EDIT.xlsx"
+    DEFAULT_INFILE = r"D:\2021 Awards\2021 3. Asia Awards"
+    s = False
     c = True
-    a = 'MENA'
+    a = 'Asia'
     d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
     if s:
-        d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
+        # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
         data = pd.read_excel(DEFAULT_INFILE, sheet_name='Shortlist')
     else:
         # winners
