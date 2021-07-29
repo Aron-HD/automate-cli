@@ -289,7 +289,7 @@ class CreateAsset(object):
 
     def __init__(self, path, outfile, award, create_type, excel_file):
         self.path = path
-        self.outfile = outfile
+        self.outfile: Path = r'C:\Users\arondavidson\OneDrive - Ascential\Desktop\2021 Asia Awards\test.csv'
         self.award = award
         self.create_type = create_type
         self.excel_file = excel_file
@@ -347,7 +347,7 @@ class CreateAsset(object):
             group.drop(['PaperGroup'], axis=1, inplace=True)
             group.sort_values(by=['ID'], inplace=True)
 
-            group.to_csv(Path(self.path) / fn)
+            group.to_csv(Path(self.path) / fn, encoding='cp1252')
             fns.append(fn)
 
         return fns
@@ -359,8 +359,8 @@ class CreateAsset(object):
 if __name__ == '__main__':
 
     infile = r'D:\2021 Awards\2021 3. Asia Awards\Asia 2021 EDIT.xlsx'
-    outfile = r'C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_scoring\test.csv'
-    path = r'C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_scoring'
+    outfile = None
+    path = r'C:\Users\arondavidson\OneDrive - Ascential\Desktop\2021 Asia Awards'
     DEFAULT_CREATE = 'scoresheets'
     award = 'asia'
     sheetnum = 1
