@@ -271,14 +271,15 @@ class IndexedMetadata(RawMetadata):
         dropcols.remove('Award')
         self.rename_cols(dfw1, csv_true)
         if csv_true:
+            dropcols.remove('Special Award')
             dfw1 = self.prep_csv(dfw1, False)
         else:
             dropcols += [self.ID]  # drop WarcID
-        # concat special awards masking blank cells
-        mask = dfw1['Special Award'] == ''
-        dfw1['Award'] = dfw1['Award'].where(
-            mask, dfw1[['Award', 'Special Award']].agg(' + '.join, axis=1)
-        )
+            # concat special awards masking blank cells
+            mask = dfw1['Special Award'] == ''
+            dfw1['Award'] = dfw1['Award'].where(
+                mask, dfw1[['Award', 'Special Award']].agg(' + '.join, axis=1)
+            )
         # drop shortlisted entries that didn't win special award (a + sa)
         dfwo = dfw1 if csv_true else dfw1.query(
             '"+" in Award or Award!="Shortlisted"')
@@ -368,8 +369,8 @@ if __name__ == '__main__':
 
     # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
     # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 MENA Prize\MENA 2021 EDIT.xlsx"
-    DEFAULT_INFILE = r"D:\2021 Awards\2021 3. Asia Awards"
-    s = False
+    DEFAULT_INFILE = r"D:\2021 Awards\2021 3. Asia Awards\Asia 2021 EDIT.xlsx"
+    s = True
     c = True
     a = 'Asia'
     d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
