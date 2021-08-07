@@ -9,3 +9,5 @@ sandbox.py
 .pytest_cache
 weather.py
 templates/
+*.sublime-project
+*.sublime-workspace
