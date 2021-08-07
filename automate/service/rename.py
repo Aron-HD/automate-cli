@@ -5,11 +5,6 @@ from typing import List, Dict, Tuple
 
 
 class WafeFilenames:
-    VTYPES = ['CaseFilm', 'SupportingContent']
-    VFORMATS = ['.mov', '.mp4']
-    IMGTYPE = 'Entrypaper'
-
-    # inherit this from other
 
     def __init__(self, path, ids, name_format):
         self.path = Path(path)
@@ -64,9 +59,9 @@ class WafeFilenames:
                                                         str]]]) -> List[str]:
 
         new_filenames: List[str] = list()
-        vtypes = WafeFilenames.VTYPES
-        vformats = WafeFilenames.VFORMATS
-        itype = WafeFilenames.IMGTYPE
+        vtypes = SETTINGS.WAFE_FILENAMES.VTYPES
+        vformats = SETTINGS.WAFE_FILENAMES.VFORMATS
+        itype = SETTINGS.WAFE_FILENAMES.IMGTYPE
 
         for id_key in split_filenames_data:
             # make this scalable to different vals
