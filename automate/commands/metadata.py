@@ -36,7 +36,7 @@ def read_spreadsheet(excel_file, excel_sheet):
         exists=True, file_okay=True, dir_okay=False,
         readable=True, resolve_path=True
     ),
-    default=SETTINGS.METADATA_INFILE,
+    default=SETTINGS.METADATA.INFILE,
     show_default=True,
     required=True,
     help="The input excel file containing the relevant metadata.",
