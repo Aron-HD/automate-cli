@@ -11,3 +11,4 @@ weather.py
 templates/
 *.sublime-project
 *.sublime-workspace
+config.json
