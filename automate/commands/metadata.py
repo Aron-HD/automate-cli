@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from automate.service.metadata import RawMetadata
 from automate.service.metadata import IndexedMetadata
+from automate import SETTINGS
 
 import click
 import pandas as pd
@@ -9,18 +10,9 @@ from datetime import date
 
 pd.options.mode.chained_assignment = None  # default='warn'
 echo = click.echo
-DEFAULT_INFILE = r'D:\2021 Awards\2021 2. MENA Prize\MENA 2021 EDIT.xlsx'
-# DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
-print('- Change DEFAULT INFILE:' + DEFAULT_INFILE)
 
 
 class Context:
-    CODES = {
-        'effectiveness': 'WARC-AWARDS-EFFECTIVENESS',
-        'mena': 'WARC-PRIZE-MENA',
-        'asia': 'WARC-AWARDS-ASIA',
-        'media': 'WARC-AWARDS-MEDIA'
-    }
 
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
@@ -44,7 +36,7 @@ def read_spreadsheet(excel_file, excel_sheet):
         exists=True, file_okay=True, dir_okay=False,
         readable=True, resolve_path=True
     ),
-    default=DEFAULT_INFILE,
+    default=SETTINGS.METADATA_INFILE,
     show_default=True,
     required=True,
     help="The input excel file containing the relevant metadata.",
@@ -101,13 +93,13 @@ def index_wafe(ctx):
     "-c",
     "--code",
     required=True,
-    type=click.Choice(Context.CODES.keys(), case_sensitive=False),
-    help="Article source publication code:\n\n"+f"{list(Context.CODES.values())}",
+    type=click.Choice(SETTINGS.CODES.keys(), case_sensitive=False),
+    help="Article source publication code:\n\n"+f"{list(SETTINGS.CODES.values())}",
 )
 @ click.pass_context
 def upload(ctx, publication_date, code):
     """Generates article upload spreadsheet details."""
-    publication_code = Context.CODES[code]
+    publication_code = SETTINGS.CODES[code]
     M = ctx.obj.raw_metadata
     M.upload(publication_date, publication_code)
 
@@ -129,8 +121,8 @@ def upload(ctx, publication_date, code):
     "-a",
     "--award",
     required=True,
-    type=click.Choice(Context.CODES.keys(), case_sensitive=False),
-    help="Award scheme:\n\n"+f"{list(Context.CODES.keys())}",
+    type=click.Choice(SETTINGS.CODES.keys(), case_sensitive=False),
+    help="Award scheme:\n\n"+f"{list(SETTINGS.CODES.keys())}",
 )
 @ click.option(
     "-d", "-o", "--destination",
