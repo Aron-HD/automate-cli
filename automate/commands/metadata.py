@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-from automate.service.metadata import RawMetadata
-from automate.service.metadata import IndexedMetadata
+from automate.service.metadata import metadata
+# from automate.service.metadata import IndexedMetadata
 from automate import SETTINGS
 
 import click
@@ -17,7 +17,7 @@ class Context:
     def __init__(self, data: pd.DataFrame, file: Path):
         self.data = data
         self.file = file
-        self.raw_metadata = RawMetadata(data, file)
+        self.raw_metadata = metadata.RawMetadata(data, file)
 
 
 def read_spreadsheet(excel_file, excel_sheet):
@@ -115,7 +115,7 @@ def upload(ctx, publication_date, code):
     "-c/-p",
     "--csv/--press",
     required=True,
-    help="Choose to csvs for landing pages or excel spreadsheets for press.",
+    help="Choose between csvs for landing pages or excel spreadsheets for press.",
 )
 @ click.option(
     "-a",
@@ -133,11 +133,12 @@ def upload(ctx, publication_date, code):
         dir_okay=True,
         resolve_path=True
     ),
+    default=SETTINGS.METADATA_DESTINATION,
     help="Specify the destination for output. Must be a folder.",
 )
 @ click.pass_context
 def winners(ctx, shortlist, csv, award, destination):
     """Writes specific metadata for circulating winners / shortlisted spreadsheets."""
-
-    M = IndexedMetadata(ctx.obj.data, ctx.obj.file, destination)
+    M = metadata.IndexedMetadata(
+        ctx.obj.data, ctx.obj.file, award, destination)
     M(shortlist, csv)
