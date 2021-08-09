@@ -59,9 +59,9 @@ class WafeFilenames:
                                                         str]]]) -> List[str]:
 
         new_filenames: List[str] = list()
-        vtypes = SETTINGS.WAFE_FILENAMES.VTYPES
-        vformats = SETTINGS.WAFE_FILENAMES.VFORMATS
-        itype = SETTINGS.WAFE_FILENAMES.IMGTYPE
+        vtypes = SETTINGS.WAFE_VTYPES
+        vformats = SETTINGS.WAFE_VFORMATS
+        itype = SETTINGS.WAFE_IMGTYPE
 
         for id_key in split_filenames_data:
             # make this scalable to different vals
