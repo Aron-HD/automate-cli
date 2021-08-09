@@ -36,7 +36,7 @@ def read_spreadsheet(excel_file, excel_sheet):
         exists=True, file_okay=True, dir_okay=False,
         readable=True, resolve_path=True
     ),
-    default=SETTINGS.METADATA.INFILE,
+    default=SETTINGS.METADATA_INFILE,
     show_default=True,
     required=True,
     help="The input excel file containing the relevant metadata.",
@@ -56,7 +56,7 @@ def cli(ctx, infile, sheet):
     if f.suffix == ".xlsx":
         ctx.obj = Context(data=read_spreadsheet(f, sheet), file=f)
     else:
-        print("--infile must be an xlsx file.")
+        echo("--infile must be an xlsx file.")
 
     # echo('\nFINISHED\n')
 
