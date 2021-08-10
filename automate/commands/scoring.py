@@ -2,33 +2,24 @@
 import click
 from automate.service.scoring import CollateScores
 from automate.service.scoring import CreateAsset
+from automate import SETTINGS
 
 
-class Context:
-    """docstring for Context"""
-    DEFAULT_INFILE = r'D:\2021 Awards\2021 2. MENA Prize\MENA 2021 EDIT.xlsx'
-    DEFAULT_SCORESHEETS = r'T:\Ascential Events\WARC\Public\WARC.com\Editorial\Awards (Warc)\2021 Awards\2. MENA Prize\Returned scoresheets'
-    DEFAULT_FILEPATH = r'C:\Users\arondavidson\Scripts\Test\2. MENA Prize'
-    DEFAULT_MARKS = 'Consolidated_marks.csv'
-    DEFAULT_CREATE = 'marks'
-    AWARDS = {
-        # 'effectiveness': 'WARC Awards for Effectiveness',
-        'mena': 'WARC Prize for MENA Strategy',
-        'asia': 'WARC Awards for Asian Strategy',
-        'media': 'WARC Awards for Media'
-    }
+# class Context:
+#     """docstring for Context"""
 
-    def __init__(self):
-        pass
-        # self.file
-        # self.collate = Collate()
+#     def __init__(self):
+#         pass
+# self.file
+# self.collate = Collate()
 
 
 @click.group()
 @click.pass_context
 def cli(ctx):
     """Scoring"""
-    ctx.obj = Context()
+    pass
+    # ctx.obj = Context()
 
 
 @cli.command()
@@ -36,7 +27,7 @@ def cli(ctx):
     "-i", "--infile",
     required=True,
     show_default=True,
-    default=Context.DEFAULT_INFILE,  # remove later
+    default=SETTINGS.SCORING_INFILE,
     type=click.Path(
         exists=True, file_okay=True, dir_okay=False,
         readable=True, resolve_path=True
@@ -47,7 +38,7 @@ def cli(ctx):
     '-p', '--path',
     required=True,
     show_default=True,
-    default=Context.DEFAULT_FILEPATH,  # remove later
+    default=SETTINGS.SCORING_FILEPATH,
     type=click.Path(
         exists=True, file_okay=False, dir_okay=True,
         resolve_path=True
@@ -58,7 +49,7 @@ def cli(ctx):
     '-o', '--outfile',
     required=False,
     show_default=True,
-    default=Context.DEFAULT_MARKS,  # remove later
+    default=SETTINGS.SCORING_OUTFILE,
     type=click.Path(
         exists=False, file_okay=True, dir_okay=False,
     ),
@@ -66,16 +57,15 @@ def cli(ctx):
 )
 @click.option(
     "-a", "--award",
-    default="mena",  # remove later
     required=True,
-    show_default=True,  # remove later
-    type=click.Choice(Context.AWARDS.keys(), case_sensitive=False),
-    help="Select award scheme:\n\n"+f"{list(Context.AWARDS.values())}",
+    show_default=True,
+    type=click.Choice(SETTINGS.AWARDS.keys(), case_sensitive=False),
+    help="Select award scheme:\n\n"+f"{list(SETTINGS.AWARDS.values())}",
 )
 @click.option(
     "-c", "--create_type",
     required=True,
-    default=Context.DEFAULT_CREATE,
+    default=SETTINGS.SCORING_CREATE,
     type=click.Choice(['scoresheets', 'marks', 'picks'], case_sensitive=False),
     help="Select what spreadsheets to create."
 )
@@ -86,7 +76,6 @@ def create(ctx, infile, path, outfile, award, create_type):
     click.echo(f'Creating: {create_type} - {outfile}')
 
     asset = CreateAsset(path, outfile, award, create_type)
-    pass
 
 
 @cli.command()
@@ -101,7 +90,7 @@ def create(ctx, infile, path, outfile, award, create_type):
     '-p', '--path',
     required=True,
     show_default=True,
-    default=Context.DEFAULT_SCORESHEETS,  # remove later
+    default=SETTINGS.SCORING_SCORESHEETS,
     type=click.Path(
         exists=True, file_okay=False, dir_okay=True,
         resolve_path=True
