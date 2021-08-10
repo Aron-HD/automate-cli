@@ -282,7 +282,7 @@ class JudgeScores:
         self.get_judge()
 
 
-class CreateAsset(object):
+class CreateAsset:
     """docstring for CreateAsset"""
     JUDGES_COLS = ['Name', 'Surname', 'Company', 'Group']
     PAPER_COLS = ['PaperGroup', 'ID', 'Ref', 'Title']
