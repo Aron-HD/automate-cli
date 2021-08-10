@@ -12,3 +12,4 @@ templates/
 *.sublime-project
 *.sublime-workspace
 config.json
+config.py
