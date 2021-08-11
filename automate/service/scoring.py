@@ -1,8 +1,9 @@
-from glob import glob
+# from glob import glob
 from pathlib import Path
-import pandas as pd
 from numpy import nan
 from functools import reduce
+from typing import List, Dict, Union
+import pandas as pd
 import pandas.io.formats.excel
 pandas.io.formats.excel.ExcelFormatter.header_style = None
 
@@ -10,14 +11,14 @@ pandas.io.formats.excel.ExcelFormatter.header_style = None
 class CollateScores:
     """Collate all scoresheets in a given folder into a Consolidated marks spreadsheet."""
 
-    def __init__(self, scoresheets_path, out_filename):
-        self.scoresheets_path = Path(scoresheets_path)
-        self.out_filename = self.scoresheets_path / f'{out_filename}.xlsx'
-        self.all_dfs = []
-        self.all_papers_scores = []
-        self.all_papers_diving = []
+    def __init__(self, scoresheets_path: Path, out_filename: str):
+        self.scoresheets_path: Path = Path(scoresheets_path)
+        self.out_filename: Path = self.scoresheets_path / f'{out_filename}.xlsx'
+        self.all_dfs: List[pd.DataFrame] = []
+        self.all_papers_scores: List[pd.DataFrame] = []
+        self.all_papers_diving: List[pd.DataFrame] = []
 
-    def group_all_scoresheets(self):
+    def group_all_scoresheets(self) -> List[pd.DataFrame]:
         grouped_dfs = []
         for scoresheet in self.scoresheets_path.glob('*GROUP*.xlsx'):
             print(scoresheet.name)
@@ -35,7 +36,7 @@ class CollateScores:
             grouped_dfs.append(output)
         return grouped_dfs
 
-    def merge_group_scores(self, group_frames):
+    def merge_group_scores(self, group_frames: List[pd.DataFrame]) -> None:
         # get unique group values
         cols = JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
         merged_group = reduce(
@@ -46,7 +47,7 @@ class CollateScores:
             ), group_frames
         )
 
-        def reduce_list(a: list, b: list):
+        def reduce_list(a: List[str], b: List[str]) -> List[str]:
             return list(set(a)-set(b))
 
         # get only judge score columns by removing ID, Ref and Paper
@@ -62,7 +63,7 @@ class CollateScores:
 
         merged_group['GroupDivingStyle'] = diving_style_formula
 
-        def split_diving_style():
+        def split_diving_style() -> None:
             # get only group score cols
             group_score_columns = reduce_list(
                 merged_group.columns, judge_score_cols)
@@ -79,14 +80,15 @@ class CollateScores:
         split_diving_style()
         return merged_group
 
-    def rank_scored_papers(self, pscores):
+    @staticmethod
+    def rank_scored_papers(pscores) -> pd.DataFrame:
         apsc = pd.concat(pscores, axis='index')
         apsc['Rank'] = apsc['GroupAverageScore'].rank(ascending=False)
         apsc['DivingRank'] = apsc['GroupDivingStyle'].rank(ascending=False)
         apsc.sort_values('Rank', ascending=True, inplace=True)
         return apsc
 
-    def concatenate_shortlist(self):
+    def concatenate_shortlist(self) -> pd.DataFrame:
         straight = self.rank_scored_papers(self.all_papers_scores)
         diving = self.rank_scored_papers(self.all_papers_diving)
         col_order = ['GroupDivingStyle', 'DivingRank',
@@ -109,7 +111,7 @@ class CollateScores:
         return pd.concat([straight, diving], axis=1)
 
     @staticmethod
-    def format_scores(wkb, wks):
+    def format_scores(wkb, wks) -> None:
 
         wks.set_column('A:B', 14)
         wks.set_column('C:C', 55)  # set papers col widest
@@ -124,9 +126,8 @@ class CollateScores:
             'D2:Z200', {'type': 'no_blanks', 'format': scores_format}
         )
 
-    def write_scores(self, n, writer):
-        sh = f'Group {n}'
-        print(sh)
+    def write_scores(self, n: int, writer: pd.ExcelWriter) -> str:
+        sh = f"Group {n}"
         # filter dataframes with keys matching group number
         frames = list(filter(lambda fr: list(fr.keys())[0] == n, self.all_dfs))
         group_scores = [list(frm.values())[0] for frm in frames]
@@ -135,21 +136,21 @@ class CollateScores:
         return sh
 
     @staticmethod
-    def format_shortlist(wkb, wks):
+    def format_shortlist(wkb, wks) -> None:
         pass
 
         # TODO:
         # - add width to papers column
         # - add conditional format to top 20 of each Ref col
 
-    def write_shortlist(self, writer):
+    def write_shortlist(self, writer: pd.ExcelWriter) -> str:
         shortlist_name = 'Shortlist calculation'
         shortlist = self.concatenate_shortlist()
         shortlist.to_excel(
             writer, sheet_name=shortlist_name, index=False)
         return shortlist_name
 
-    def write_consolidated_marks(self):
+    def write_consolidated_marks(self) -> None:
 
         # make a list of unique group numbers
         groups = list(set(list(frm.keys())[0] for frm in self.all_dfs))
@@ -158,11 +159,12 @@ class CollateScores:
             workbook = xlwriter.book
             for num in groups:
                 sheetname = self.write_scores(num, xlwriter)
+                print(sheetname)
                 self.format_scores(workbook, xlwriter.sheets[sheetname])
             shortlist_sheet = self.write_shortlist(xlwriter)
             self.format_shortlist(workbook, xlwriter.sheets[shortlist_sheet])
 
-    def __call__(self):
+    def __call__(self) -> Path:
         self.all_dfs = self.group_all_scoresheets()
         self.write_consolidated_marks()
         return self.out_filename
@@ -172,10 +174,10 @@ class JudgeScores:
     """Read score data, judge details and calculations based on scores from scoresheet."""
     data_columns = ['ID', 'Ref', 'Paper', 'Score']
 
-    def __init__(self, scoresheet):
+    def __init__(self, scoresheet: Path):
         self.scoresheet = Path(scoresheet)
         self.judge_scores = None
-        self.judge = {}
+        self.judge: Dict[str, Union[str, int]] = {}
 
     def get_judge(self):
         """Get the judges name, group and category from the scoresheet."""
