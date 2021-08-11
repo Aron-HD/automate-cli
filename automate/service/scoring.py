@@ -36,7 +36,7 @@ class CollateScores:
             grouped_dfs.append(output)
         return grouped_dfs
 
-    def merge_group_scores(self, group_frames: List[pd.DataFrame]) -> None:
+    def merge_group_scores(self, group_frames: List[pd.DataFrame]) -> pd.DataFrame:
         # get unique group values
         cols = JudgeScores.data_columns[:-1]  # ['ID', 'Ref', 'Paper']
         merged_group = reduce(
