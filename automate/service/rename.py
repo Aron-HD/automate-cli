@@ -2,6 +2,7 @@ import click
 from pathlib import Path, WindowsPath
 # from pprint import pprint
 from typing import List, Dict, Tuple
+from automate import SETTINGS
 
 
 class WafeFilenames:
@@ -158,12 +159,14 @@ class RenameFile:
         self.path = Path(path)
         self.ids = ids
         self.award = award
+        self.old_filenames = []
+        self.new_names = []
+        self.output_filename = self.path / 'rename_output.csv'
 
     def lookup_id(self, idnum):
         """lookup id within excel ids."""
         try:
-            new = self.ids[idnum]
-            return new
+            return self.ids[idnum]
         except KeyError:
             # print('KeyError:', e, '- not found during lookup')
             return False
@@ -181,15 +184,15 @@ class RenameFile:
         # or have separator determined at cli entry point
         stem = file.stem
         raw_id = stem
-        new_name = ''
+        new_name = None
 
-        if file.suffix == '.docx':
+        if file.suffix in SETTINGS.DOCFORMATS:
             # split these up so call this function once
             new_id = self.lookup_id(raw_id)
             new_name = name.replace(raw_id, new_id) if new_id else False
 
         # split old id
-        elif self.award:
+        elif file.suffix in SETTINGS.VFORMATS:
             raw_asset = stem.split(' ')
             processed_asset = stem.split('v')
             # if filename has no delimiter
@@ -228,6 +231,8 @@ class RenameFile:
         new_name, id_exists = self.split_filename(file, fn)
 
         if id_exists:
+            self.old_filenames.append(fn)
+            self.new_names.append(new_name)
 
             new_file = file.parent / new_name
             try:
@@ -239,12 +244,12 @@ class RenameFile:
                 click.echo(' FAILED\t' + fn + ' -> ' + new_name +
                            ' - already exists')
 
-    def runprocess(self):
+    def process(self) -> List[Tuple[str, str]]:
 
         p = self.path
-
         if p.is_dir():
             files = list(p.glob('*'))
             self.rename_multiple(files)
         elif p.is_file():
             self.rename_file(p)
+        return list(zip(self.old_filenames, self.new_names))
