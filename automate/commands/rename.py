@@ -1,10 +1,7 @@
 import click
 import pandas as pd
 from automate.service import rename
-
-DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
-DEFAULT_FILESPATH = r'C:\Users\arondavidson\Scripts\Test\_innovation'
-DEFAULT_FILE = r'C:\Users\arondavidson\Scripts\Test\_innovation\758844_1714426_Entrypaper.docx'
+from automate import SETTINGS
 
 
 def get_ids(excelfile, sheet):
@@ -33,7 +30,7 @@ def get_ids(excelfile, sheet):
                     dir_okay=False,
                     readable=True,
                     resolve_path=True),
-    default=DEFAULT_INFILE,  # remove later
+    default=SETTINGS.RENAME_INFILE,  # remove later
     show_default=True,
     required=True,
     help="The input excel file containing the relevant metadata.",
@@ -44,8 +41,7 @@ def get_ids(excelfile, sheet):
     default=0,
     required=True,
     show_default=True,
-    help=
-    "The sheet within the infile you want to read. This can be the name or an index.",
+    help="The sheet within the infile you want to read. This can be the name or an index.",
 )
 @click.option(
     "-f",
@@ -54,7 +50,7 @@ def get_ids(excelfile, sheet):
                     file_okay=True,
                     dir_okay=True,
                     resolve_path=True),
-    default=DEFAULT_FILESPATH,  # remove later
+    default=SETTINGS.RENAME_FILESPATH,  # remove later
     show_default=True,
     required=True,
     help="The directory containing the files to rename.",
@@ -64,8 +60,7 @@ def get_ids(excelfile, sheet):
     default=True,
     required=True,
     show_default=True,
-    help=
-    "The sheet within the infile you want to read. This can be the name or an index.",
+    help="The sheet within the infile you want to read. This can be the name or an index.",
 )
 @click.option(
     "-n",
@@ -80,15 +75,22 @@ def cli(infile, sheet, filepath, award, name_format):
     click.echo('\nINPUT: ' + click.style(filepath, fg='yellow'))
     ids = get_ids(infile, sheet)
 
+    # remove name_format vs award
+    # strategy = rename.WafeFilenames if not award else rename.RenameFile
+    # s = strategy(filepath, ids)
+    # out_data = s.process()
+
+    out_data = None
     if award:
-        rf = rename.RenameFile(filepath, ids, award)
-        rf.runprocess()
+        s = rename.RenameFile(filepath, ids, award)
+        out_data = s.process()
     elif not award:
-        fn = rename.WafeFilenames(filepath, ids, name_format)
-        out_data = fn.process()
+        s = rename.WafeFilenames(filepath, ids, name_format)
+        out_data = s.process()
 
-        # write output csv to input path
-        dfo = pd.DataFrame(out_data, columns=['Old', 'New'])
-        dfo.to_csv(fn.output_filename, index=False)
-
-        # print(len(new_names))
+    # write output csv to input path
+    outfile = s.output_filename
+    dfo = pd.DataFrame(out_data, columns=['Old', 'New'])
+    dfo.to_csv(outfile, index=False)
+    print(f"wrote: {outfile}")
+    # print(len(new_names))
