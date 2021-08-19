@@ -26,7 +26,7 @@ class RawMetadata:
         """Writes only columns needed for indexing spreadsheet and collates agency details."""
         try:
             keep = [
-                'ID', 'Award Reference', 'Budget', 'Campaign Duration',
+                'ID', 'Award Reference', 'Award Name', 'Shortlisted', 'Budget', 'Campaign Duration',
                 'Award Title', 'Brand', 'Brand Owner Name', 'Lead Agency (1)',
                 'Lead Agency (2)', 'Contributing Agency (1)',
                 'Contributing Agency (2)', 'Contributing Agency (3)',
@@ -47,7 +47,7 @@ class RawMetadata:
             ]].apply(comma_join, axis=1)
 
             keep2 = [
-                'ID', 'Award Reference', 'Award Title', 'Brand', 'Brand Owner Name', 'Budget',
+                'ID', 'Award Reference', 'Award Name', 'Shortlisted', 'Award Title', 'Brand', 'Brand Owner Name', 'Budget',
                 'Campaign Duration', 'Lead Agencies', 'Contributing Agencies', 'Countries'
             ]
 
