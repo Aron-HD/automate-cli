@@ -165,7 +165,7 @@ class IndexedMetadata(RawMetadata):
         'ID': 'ID',
         'Award Title': 'Title',
         'Brand': 'Brand',
-        'Brand owner': 'Parent',
+        'Brand owner name': 'Parent',
         'Lead agencies': 'Lead',
         'Contributing agencies': 'Contributing',
         'Countries': 'Market',
@@ -197,7 +197,8 @@ class IndexedMetadata(RawMetadata):
         self.data = data.fillna('')
         self.award = award
         # setup dependent on prize / award having categories
-        try:
+
+        if award == "effectiveness":
             self.data.sort_values(
                 by='Category',
                 inplace=True,
@@ -206,8 +207,8 @@ class IndexedMetadata(RawMetadata):
             self.categories = data['Category'].unique()
             self.cols = IndexedMetadata.alt_cols
             self.ID = 'WarcID'
-        except KeyError as e:
-            print(e)  # log
+        else:
+            # print(e)  # log
             self.categories = [award]
             self.cols = IndexedMetadata.cols
             self.ID = 'ID'
@@ -363,23 +364,3 @@ class IndexedMetadata(RawMetadata):
                 output_name = self.write_excel(frame=cat_winners, filename=fnm)
 
             echo('\t wrote: ' + click.style(output_name, fg='green'))
-
-
-if __name__ == '__main__':
-
-    # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 Effectiveness Awards\WAFE_2021_EDIT.xlsx"
-    # DEFAULT_INFILE = r"T:\Ascential Events\WARC\Backup Server\Loading\Monthly content for Newgen\Project content - May 2021\2021 MENA Prize\MENA 2021 EDIT.xlsx"
-    DEFAULT_INFILE = r"D:\2021 Awards\2021 3. Asia Awards\Asia 2021 EDIT.xlsx"
-    s = True
-    c = True
-    a = 'Asia'
-    d = r"C:\Users\arondavidson\OneDrive - Ascential\Desktop\TEST_metadata"
-    if s:
-        # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv/shortlists'
-        data = pd.read_excel(DEFAULT_INFILE, sheet_name='Shortlist')
-    else:
-        # winners
-        # d = r'C:/Users/arondavidson/Scripts/Python/Landing_pages/data/csv'
-        data = pd.read_excel(DEFAULT_INFILE, sheet_name='Winners')
-    IM = IndexedMetadata(data, DEFAULT_INFILE, a, d)
-    IM(s, c)
