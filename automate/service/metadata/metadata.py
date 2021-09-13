@@ -162,27 +162,27 @@ class IndexedMetadata(RawMetadata):
     as well as csv sheets for winners / shortlists that are used by landing page generator.
     """
     cols = {
-        'ID': 'ID',
-        'Award Title': 'Title',
-        'Brand': 'Brand',
-        'Brand owner name': 'Parent',
-        'Lead agencies': 'Lead',
-        'Contributing agencies': 'Contributing',
-        'Countries': 'Market',
-        'Industry sector': 'Sector',
+        'id': 'ID',
+        'award title': 'Title',
+        'brand': 'Brand',
+        'brand owner name': 'Parent',
+        'lead agencies': 'Lead',
+        'contributing agencies': 'Contributing',
+        'countries': 'Market',
+        'industry sector': 'Sector',
     }
     alt_cols = {
-        'WarcID': 'ID',
-        'Article Title': 'Title',
-        'Brand': 'Brand',
-        'Advertiser': 'Parent',
-        'Entrant Company': 'Entrant',
-        'Idea creation': 'Idea',
-        'Media': 'Media',
-        'PR': 'PR',
-        'Entrant Country': 'Country',
-        'Location/Region': 'Market',
-        'Industry sector': 'Sector',
+        'warcid': 'ID',
+        'article Title': 'Title',
+        'brand': 'Brand',
+        'advertiser': 'Parent',
+        'entrant company': 'Entrant',
+        'idea creation': 'Idea',
+        'media': 'Media',
+        'pr': 'PR',
+        'entrant country': 'Country',
+        'location/region': 'Market',
+        'industry sector': 'Sector',
     }
     content_codes = {
         'mena': 'WARC-PRIZE-MENA',
@@ -195,6 +195,8 @@ class IndexedMetadata(RawMetadata):
         super().__init__(data, file)
         self.destination = destination
         self.data = data.fillna('')
+        # lowercase for case insensitivity
+        self.data.columns = map(str.lower, self.data.columns)
         self.award = award
         # setup dependent on prize / award having categories
 
@@ -206,12 +208,12 @@ class IndexedMetadata(RawMetadata):
             )
             self.categories = data['Category'].unique()
             self.cols = IndexedMetadata.alt_cols
-            self.ID = 'WarcID'
+            self.ID = 'warcid'
         else:
             # print(e)  # log
             self.categories = [award]
             self.cols = IndexedMetadata.cols
-            self.ID = 'ID'
+            self.ID = 'id'
         self.meta_cols = list(self.cols.keys())
         self.csv_cols = list(self.cols.values())
         self.award_cols = ['Tier', 'Special Award', 'Award']
@@ -338,29 +340,37 @@ class IndexedMetadata(RawMetadata):
 
     def __call__(self, shortlist: bool, csv: bool):
 
-        for cat in self.categories:
-            try:
-                df = self.data.query(f'Category=="{cat}"')
-            except UndefinedVariableError:
-                df = self.data
-            if csv:
-                cat = self.split_category_name(cat)
+        try:
 
-            if shortlist:
-                win_type = 'shortlist'
-                cat_winners = self.prep_shortlist(df, csv)
-            else:
-                win_type = 'winners'
-                cat_winners = self.prep_winners(df, csv)
+            for cat in self.categories:
+                try:
+                    df = self.data.query(f'Category=="{cat}"')
+                except UndefinedVariableError:
+                    df = self.data
+                if csv:
+                    cat = self.split_category_name(cat)
 
-            fnm = ' '.join([cat, win_type])
+                if shortlist:
+                    win_type = 'shortlist'
+                    cat_winners = self.prep_shortlist(df, csv)
+                else:
+                    win_type = 'winners'
+                    cat_winners = self.prep_winners(df, csv)
 
-            if csv:
-                alt_fnm = fnm.replace(' ', '_').lower()
-                output_name = self.write_csv(
-                    frame=cat_winners, filename=alt_fnm)
-            else:
-                # cat_winners['Location/Region'] = cat_winners['Market']
-                output_name = self.write_excel(frame=cat_winners, filename=fnm)
+                fnm = ' '.join([cat, win_type])
 
-            echo('\t wrote: ' + click.style(output_name, fg='green'))
+                if csv:
+                    alt_fnm = fnm.replace(' ', '_').lower()
+                    output_name = self.write_csv(
+                        frame=cat_winners, filename=alt_fnm)
+                else:
+                    # cat_winners['Location/Region'] = cat_winners['Market']
+                    output_name = self.write_excel(
+                        frame=cat_winners, filename=fnm)
+
+                echo('\n\t wrote: ' + click.style(output_name, fg='green'))
+
+        except KeyError as e:
+            echo("\nCheck headers")
+            echo(click.style(str(e), fg="red"))
+            raise e
