@@ -173,7 +173,7 @@ class IndexedMetadata(RawMetadata):
     }
     alt_cols = {
         'warcid': 'ID',
-        'article Title': 'Title',
+        'article title': 'Title',
         'brand': 'Brand',
         'advertiser': 'Parent',
         'entrant company': 'Entrant',
@@ -216,7 +216,7 @@ class IndexedMetadata(RawMetadata):
             self.ID = 'id'
         self.meta_cols = list(self.cols.keys())
         self.csv_cols = list(self.cols.values())
-        self.award_cols = ['Tier', 'Special Award', 'Award']
+        self.award_cols = ['tier', 'special award', 'award']
         self.winner_cols = self.meta_cols.copy()
         [self.winner_cols.insert(0, x) for x in self.award_cols]
 
@@ -261,7 +261,7 @@ class IndexedMetadata(RawMetadata):
     def prep_winners(self, dfw, csv_true: bool):
         # ToDo: switch to prep_excel()
         dfw.sort_values(
-            by='Tier',
+            by='tier',
             ascending=False,
             inplace=True,
             ignore_index=True
@@ -271,21 +271,21 @@ class IndexedMetadata(RawMetadata):
         # drop Special Award, Tier
         dropcols = self.award_cols.copy()
         # dont drop Award
-        dropcols.remove('Award')
+        dropcols.remove('award')
         self.rename_cols(dfw1, csv_true)
         if csv_true:
-            dropcols.remove('Special Award')
+            dropcols.remove('special award')
             dfw1 = self.prep_csv(dfw1, False)
         else:
             dropcols += [self.ID]  # drop WarcID
             # concat special awards masking blank cells
-            mask = dfw1['Special Award'] == ''
-            dfw1['Award'] = dfw1['Award'].where(
-                mask, dfw1[['Award', 'Special Award']].agg(' + '.join, axis=1)
+            mask = dfw1['special award'] == ''
+            dfw1['award'] = dfw1['award'].where(
+                mask, dfw1[['award', 'special award']].agg(' + '.join, axis=1)
             )
         # drop shortlisted entries that didn't win special award (a + sa)
         dfwo = dfw1 if csv_true else dfw1.query(
-            '"+" in Award or Award!="Shortlisted"')
+            '"+" in award or award!="Shortlisted"')
         return dfwo.drop(dropcols, axis=1)
 
     @staticmethod
