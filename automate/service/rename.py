@@ -185,6 +185,7 @@ class RenameFile:
         stem = file.stem
         raw_id = stem
         new_name = None
+        new_id = None
 
         if file.suffix in SETTINGS.DOCFORMATS:
             # split these up so call this function once
