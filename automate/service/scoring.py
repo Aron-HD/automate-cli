@@ -227,7 +227,11 @@ class JudgeScores:
             except ValueError:
                 return find_scores(col - 1)
 
-        totals = find_scores(col=9)
+        try:
+            totals = find_scores(col=9)
+        except RecursionError:
+            print(f"RecursionError: raising SystemExit - Cause:\n\n{self.scoresheet}\n")
+            raise SystemExit
         # concat paper cols with total scores and drop index
         score_data = pd.concat(
             [score_rows[0], score_rows[1], score_rows[2], totals],
