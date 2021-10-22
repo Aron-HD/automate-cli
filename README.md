@@ -6,6 +6,16 @@ A command line application using click module and structured in the command desi
 - commands ('automate/commands') 
 - receivers ('automate/service')
 
+## Installation
+
+```bash
+git clone https://github.com/Aron-HD/automate-cli
+```
+
+```bash
+python setup.py install
+```
+
 ---
 
 - **Rename** - for automating renaming of files for different awards.
