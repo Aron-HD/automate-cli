@@ -10,13 +10,15 @@ def read_requirements():
 
 
 setup(
-        name='automate',
-        version='0.1',
-        packages=find_packages(),
-        include_package_data=True,
-        install_requires=read_requirements(),
-        entry_points='''
-		[console_scripts]
-		automate=automate.cli:cli
-	'''
+    name='automate',
+    version='0.1',
+    packages=find_packages(),
+    include_package_data=True,
+    install_requires=read_requirements(),
+    entry_points='''
+        [console_scripts]
+        automate=automate.cli:cli
+    ''',
+    author="Aron-HD",
+    url="https://github.com/Aron-HD/automate-cli"
 )
