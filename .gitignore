@@ -13,3 +13,6 @@ templates/
 *.sublime-workspace
 config.json
 config.py
+automate/__init__.py
+build/
+dist/
