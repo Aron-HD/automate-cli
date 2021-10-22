@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-
+import click
 
 DEFAULTS = {
     "CODES": {
@@ -15,6 +15,9 @@ DEFAULTS = {
         'asia': 'WARC Awards for Asian Strategy',
         'media': 'WARC Awards for Media'
     },
+
+    # set these to a test folder with example data
+
     # COMMANDS
     # command.metadata
     "METADATA_INFILE": r"C:\Users\arondavidson\Scripts\Python\automate\_incomplete\campaigndetails\testdata\Asia 2021 EDIT.xlsx",
@@ -42,7 +45,7 @@ DEFAULTS = {
 
 
 class Settings:
-    _config_location = 'config.json'
+    _config_location = f'{Path(__file__).parents[0]}/config.json'
 
     def __init__(self):
         if Path(self._config_location).exists():
@@ -54,3 +57,16 @@ class Settings:
 
 
 SETTINGS = Settings()
+cs = SETTINGS.__dict__.copy()
+
+[
+    cs.pop(x) for x in [
+        "AWARDS", "CODES",
+        "WAFE_VTYPES", "WAFE_VFORMATS", "WAFE_IMGTYPE",
+        "VFORMATS", "IMGFORMATS", "DOCFORMATS"
+    ]
+]
+
+
+click.echo(click.style('\n### CUSTOM INPUTS ###', fg="cyan"))
+[click.echo(click.style(f"\n -> {k} = {v}", fg="cyan")) for k, v in cs.items()]
